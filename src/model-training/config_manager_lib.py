@@ -30,7 +30,10 @@ class config_manager:
         return self.last_run_config
 
 
-    def save_run_configuration(self, epoch, train_loss, train_acc, val_loss, val_acc, best_val_acc, checkpoint_path):
+    def save_run_configuration(self, epoch, 
+                               train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time,
+                               val_loss, val_acc, val_total_images, val_time, val_latency, val_cpu_time,
+                               best_val_acc, checkpoint_path):
         run_directory = self.config.get("run_directory")
         run_name = self.config.get("run_name")
         current_run_dir = f"{run_directory}/{run_name}"
@@ -43,8 +46,16 @@ class config_manager:
             "date_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "train_loss": train_loss,
             "train_acc": train_acc,
+            "train_total_images": train_total_images,
+            "train_time": train_time,
+            "train_latency": train_latency,
+            "train_cpu_time": train_cpu_time,
             "val_loss": val_loss,
             "val_acc": val_acc,
+            "val_total_images": val_total_images,
+            "val_time": val_time,
+            "val_latency": val_latency,
+            "val_cpu_time": val_cpu_time,
             "best_val_acc": best_val_acc,
             "checkpoint_path": checkpoint_path
         }

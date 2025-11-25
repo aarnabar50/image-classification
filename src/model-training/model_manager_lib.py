@@ -32,12 +32,10 @@ class model_manager:
         ])
 
 
-
-    def load_datasets(self, train_dir, val_dir):
+    def load_training_dataset(self, train_dir):
         """Initialize the data sets for training and validation datasets."""
 
         train_dataset = datasets.ImageFolder(root=str(train_dir), transform=self.train_transform)
-        val_dataset   = datasets.ImageFolder(root=str(val_dir), transform=self.val_transform)
 
         batch_size = 32
         num_workers = 1
@@ -50,6 +48,18 @@ class model_manager:
             pin_memory=False
         )
 
+        self.class_names = train_dataset.classes
+        self.num_classes = len(self.class_names)
+
+    def load_evaludation_dataset(self, val_dir):
+        """Initialize the data sets for training and validation datasets."""
+
+        val_dataset   = datasets.ImageFolder(root=str(val_dir), transform=self.val_transform)
+
+        batch_size = 32
+        num_workers = 1
+
+
         self.val_loader = DataLoader(
             val_dataset,
             batch_size=batch_size,
@@ -58,11 +68,16 @@ class model_manager:
             pin_memory=False
         )
 
-        self.class_names = train_dataset.classes
+        self.class_names = val_dataset.classes
         self.num_classes = len(self.class_names)
 
-        print("Number of classes:", self.num_classes)
-        print("Classes:", self.class_names)        
+
+
+    def load_datasets(self, train_dir, val_dir):
+        """Initialize the data sets for training and validation datasets."""
+        self.load_training_dataset(train_dir)
+        self.load_evaludation_dataset(val_dir)
+
 
     def init_model(self, state_dict_path=None):
         """Initialize the model, loss function, and optimizer."""
@@ -106,6 +121,7 @@ class model_manager:
         running_loss = 0.0
         correct = 0
         total = 0
+     
 
         loop = tqdm(self.train_loader, desc="Train", leave=False)
         for images, labels in loop:
@@ -132,8 +148,13 @@ class model_manager:
 
         epoch_loss = running_loss / total
         epoch_acc = correct / total
-        return epoch_loss, epoch_acc
 
+        epoch_total_images = total  # Total images processed in this epoch
+        epoch_time = loop.format_dict['elapsed']  # Time in seconds for this epoch
+        epoch_latency = epoch_time / epoch_total_images if epoch_total_images > 0 else 0
+        epoch_cpu_time = epoch_time * torch.get_num_threads()  # Approximate CPU time
+
+        return epoch_loss, epoch_acc, epoch_total_images, epoch_time, epoch_latency, epoch_cpu_time
 
     def evaluate(self, eval_percentage):
         """Evaluate the model on the validation dataset."""
@@ -166,7 +187,14 @@ class model_manager:
 
         epoch_loss = running_loss / total
         epoch_acc = correct / total
-        return epoch_loss, epoch_acc
+
+        epoch_total_images = total  # Total images processed in this epoch
+        epoch_time = loop.format_dict['elapsed']  # Time in seconds for this epoch
+        epoch_latency = epoch_time / epoch_total_images if epoch_total_images > 0 else 0
+        epoch_cpu_time = epoch_time * torch.get_num_threads()  # Approximate CPU time
+        
+
+        return epoch_loss, epoch_acc, epoch_total_images, epoch_time, epoch_latency, epoch_cpu_time
 
     def save_checkpoint(self, epoch, val_acc, checkpoint_path):
         """Save the model checkpoint."""

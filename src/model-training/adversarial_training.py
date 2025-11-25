@@ -86,16 +86,24 @@ def run_model_training():
     while epoch <= number_of_epochs:
         print(f"\nEpoch {epoch}/{number_of_epochs}")
 
-        train_loss, train_acc = base_model.train(training_percentage)
+        train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train(training_percentage)
 
-        val_loss, val_acc = base_model.evaluate(eval_percentage)
+        val_loss, val_acc, val_total_images, val_time, val_latency, val_cpu_time = base_model.evaluate(eval_percentage)
 
         if (epoch) % print_every_epoch == 0:
             print(
                 f"Train loss: {train_loss:.4f} | "
                 f"Train acc: {train_acc:.4f} | "
+                f"Train images: {train_total_images} | "
+                f"Train time: {train_time:.2f}s | "
+                f"Train latency: {train_latency:.4f}s | "
+                f"Train CPU time: {train_cpu_time:.4f}s | "
                 f"Val loss: {val_loss:.4f} | "
-                f"Val acc: {val_acc:.4f}"
+                f"Val acc: {val_acc:.4f} | "
+                f"Val images: {val_total_images} | "
+                f"Val time: {val_time:.2f}s | "
+                f"Val latency: {val_latency:.4f}s | "
+                f"Val CPU time: {val_cpu_time:.4f}s"
             )
 
 
@@ -115,7 +123,23 @@ def run_model_training():
 
             base_model.save_checkpoint(epoch, val_acc, checkpoint_path)
 
-        config.save_run_configuration(epoch, train_loss, train_acc, val_loss, val_acc, best_val_acc, checkpoint_path)
+        config.save_run_configuration(
+            epoch, 
+            train_loss, 
+            train_acc, 
+            train_total_images, 
+            train_time, 
+            train_latency, 
+            train_cpu_time,
+            val_loss, 
+            val_acc, 
+            val_total_images, 
+            val_time, 
+            val_latency, 
+            val_cpu_time,
+            best_val_acc, 
+            checkpoint_path
+        )
 
         # Increment epoch counter
         epoch += 1
