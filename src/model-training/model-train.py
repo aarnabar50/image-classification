@@ -94,7 +94,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=
 # 4. Train & Eval Functions
 # ==========================
 
-def train_one_epoch(model, loader, optimizer, criterion, device):
+def train(model, loader, optimizer, criterion, device):
     model.train()
     running_loss = 0.0
     correct = 0

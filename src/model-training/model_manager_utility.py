@@ -4,18 +4,18 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, models
 from tqdm import tqdm
+import datetime
+from PIL import Image
 
 class model_manager:
-    def __init__(self, train_dir, val_dir):
+    def __init__(self):
         """Initialize the ModelTrainer with data loaders."""
-        self.init_data_loaders(train_dir, val_dir)
-        self.init_model()
-        
+        self.init_transforms()
+        self.model = None
 
-
-    def init_data_loaders(self, train_dir, val_dir):
+    def init_transforms(self):
         """Initialize the data loaders for training and validation datasets."""
-        train_transform = transforms.Compose([
+        self.train_transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.RandomHorizontalFlip(),
             transforms.ColorJitter(brightness=0.3, contrast=0.3),
@@ -24,15 +24,20 @@ class model_manager:
                                 std=[0.229, 0.224, 0.225]),
         ])
 
-        val_transform = transforms.Compose([
+        self.val_transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                 std=[0.229, 0.224, 0.225]),
         ])
 
-        train_dataset = datasets.ImageFolder(root=str(train_dir), transform=train_transform)
-        val_dataset   = datasets.ImageFolder(root=str(val_dir), transform=val_transform)
+
+
+    def load_datasets(self, train_dir, val_dir):
+        """Initialize the data sets for training and validation datasets."""
+
+        train_dataset = datasets.ImageFolder(root=str(train_dir), transform=self.train_transform)
+        val_dataset   = datasets.ImageFolder(root=str(val_dir), transform=self.val_transform)
 
         batch_size = 32
         num_workers = 1
@@ -59,16 +64,34 @@ class model_manager:
         print("Number of classes:", self.num_classes)
         print("Classes:", self.class_names)        
 
-    def init_model(self):
+    def init_model(self, state_dict_path=None):
         """Initialize the model, loss function, and optimizer."""
-        learning_rate = 1e-4
-        weight_decay = 1e-4
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print("Using device:", self.device)
 
-        # Using torchvision >= 0.13 style weights API
-        self.model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        
+
+        if( state_dict_path):
+            checkpoint = torch.load(state_dict_path, map_location=self.device)
+            self.class_names = checkpoint.get('class_names', [])
+            self.num_classes = checkpoint['model_state_dict']['fc.weight'].shape[0]
+            self.model = models.resnet18(num_classes=self.num_classes)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            print("State dict loaded from:", state_dict_path)
+        else:
+            self.model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+            print("Initialized new model.")
+            
+
+
+
+
+    def init_optimizer(self):
+        """Initialize optimizers."""
+        learning_rate = 1e-4
+        weight_decay = 1e-4
+        
         in_features = self.model.fc.in_features
         self.model.fc = nn.Linear(in_features, self.num_classes)  # replace final layer
         self.model = self.model.to(self.device)
@@ -77,7 +100,8 @@ class model_manager:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay) 
 
 
-    def train_one_epoch(self):
+
+    def train(self, training_percentage=100):
         """Train the model for one epoch."""
         self.model.train()
         running_loss = 0.0
@@ -102,12 +126,18 @@ class model_manager:
 
             loop.set_postfix(loss=loss.item())
 
+            # Check if we've reached the desired training percentage
+            progress_percentage = (loop.n / loop.total) * 100
+            if progress_percentage >= training_percentage:
+                break
+
         epoch_loss = running_loss / total
         epoch_acc = correct / total
         return epoch_loss, epoch_acc
 
 
     def evaluate(self):
+        """Evaluate the model on the validation dataset."""
         self.model.eval()
         running_loss = 0.0
         correct = 0
@@ -132,3 +162,35 @@ class model_manager:
         epoch_loss = running_loss / total
         epoch_acc = correct / total
         return epoch_loss, epoch_acc
+
+    def save_checkpoint(self, epoch, val_acc, model_type="BaseModel"):
+        """Save the model checkpoint."""
+        save_dir = "/Users/aarnabar/image-classification/models"
+        data_time_str =  datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        checkpoint_path = f"{save_dir}/{model_type}_{data_time_str}.pth"
+
+        torch.save({
+            "epoch": epoch + 1,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "val_acc": val_acc,
+            "class_names": self.class_names,
+        }, checkpoint_path)
+        print(f"--> New best model checkpoint saved with val_acc={val_acc:.4f}")
+
+
+    def infer(self, image_path): 
+        """Run inference on a single image."""
+        self.model.eval().to(self.device)
+
+        image = Image.open(image_path).convert("RGB")
+        tensor = self.val_transform(image).unsqueeze(0).to(self.device)
+
+        # Predict
+        with torch.no_grad():
+            outputs = self.model(tensor)
+        pred_class = outputs.argmax(dim=1).item()
+        pred_class_name = self.class_names[pred_class] if self.class_names else str(pred_class)
+        print("Predicted class index:", pred_class)
+        print("Predicted class name:", pred_class_name)
+        return pred_class_name

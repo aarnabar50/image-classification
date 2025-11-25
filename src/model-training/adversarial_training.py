@@ -1,3 +1,8 @@
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms, models
+
 from model_manager_utility import model_manager
 def main():
     """Main function to provide user choices for model operations."""
@@ -19,9 +24,8 @@ def main():
             print("Training the basic model...")            
             run_model_training()
         elif choice == '2':
-            print("Running model in evaluation mode...")
-            # Add your evaluation logic here
-            # evaluate_model()
+            print("Running model in inference mode...")
+            run_inference_mode()
         else:
             print("Invalid choice. Please try again.")
 
@@ -35,20 +39,27 @@ def run_model_training():
     print("Enter the number of epochs for training:")
     number_of_epochs = int(input().strip())
 
+    print("Enter the desired level of training (percentage):")
+    training_percentage = int(input().strip())
+
+
     data_dir = "/Users/aarnabar/image-classification/data/cropped_lisa_1"   # root folder that contains train/ and val/
     train_dir = f"{data_dir}/train_1"
     val_dir   = f"{data_dir}/val_1"
 
-    model_mgr = model_manager(train_dir, val_dir)
-
+    
+    base_model = model_manager()
+    base_model.load_datasets(train_dir, val_dir)
+    base_model.init_model()    
+    base_model.init_optimizer()                      
 
 
     for epoch in range(number_of_epochs):
         print(f"\nEpoch {epoch + 1}/{number_of_epochs}")
 
-        train_loss, train_acc = model_mgr.train_one_epoch()
+        train_loss, train_acc = base_model.train(training_percentage)
 
-        val_loss, val_acc = model_mgr.evaluate()
+        val_loss, val_acc = base_model.evaluate()
 
         if (epoch + 1) % print_every_epoch == 0:
             print(
@@ -58,9 +69,40 @@ def run_model_training():
                 f"Val acc: {val_acc:.4f}"
             )
 
+        # Save the best model
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            base_model.save_checkpoint(epoch, val_acc, model_type="BaseModel")
+
 
     print("\nTraining finished.")
     print("Best validation accuracy:", best_val_acc)
+
+def run_inference_mode():
+    """Function to run the model in inference mode."""
+
+    infer_model = model_manager()
+    
+    # Load the trained model
+    model_path = input("Enter the path to the trained model: ").strip()
+
+    infer_model.init_model(model_path)
+    
+    while True:
+        image_path = input("\nEnter the image path (or 'q' to quit): ").strip()
+        
+        if image_path.lower() == 'q':
+            print("Exiting inference mode...")
+            break
+        
+        try:
+            # Run inference on the image
+            prediction = infer_model.infer(image_path)
+            print(f"Prediction: {prediction}")
+        except Exception as e:
+            print(f"Error processing image: {e}")
+
+
 
 if __name__ == "__main__":
     main()
