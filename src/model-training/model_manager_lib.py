@@ -45,17 +45,17 @@ class model_manager:
         self.train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=True,  # changed to True for training
             num_workers=num_workers,
-            pin_memory=True
+            pin_memory=False
         )
 
         self.val_loader = DataLoader(
             val_dataset,
             batch_size=batch_size,
-            shuffle=False,
+            shuffle=False,   # changed to False for validation
             num_workers=num_workers,
-            pin_memory=True
+            pin_memory=False
         )
 
         self.class_names = train_dataset.classes
@@ -71,7 +71,6 @@ class model_manager:
         print("Using device:", self.device)
 
         
-
         if( state_dict_path):
             checkpoint = torch.load(state_dict_path, map_location=self.device)
             self.class_names = checkpoint.get('class_names', [])
@@ -84,7 +83,7 @@ class model_manager:
             print("Initialized new model.")
             
 
-
+        self.init_optimizer()
 
 
     def init_optimizer(self):
@@ -136,7 +135,7 @@ class model_manager:
         return epoch_loss, epoch_acc
 
 
-    def evaluate(self):
+    def evaluate(self, eval_percentage):
         """Evaluate the model on the validation dataset."""
         self.model.eval()
         running_loss = 0.0
@@ -159,16 +158,18 @@ class model_manager:
 
                 loop.set_postfix(loss=loss.item())
 
+                # Check if we've reached the desired evaluation percentage
+                progress_percentage = (loop.n / loop.total) * 100
+                if progress_percentage >= eval_percentage:
+                    break
+
+
         epoch_loss = running_loss / total
         epoch_acc = correct / total
         return epoch_loss, epoch_acc
 
-    def save_checkpoint(self, epoch, val_acc, model_type="BaseModel"):
+    def save_checkpoint(self, epoch, val_acc, checkpoint_path):
         """Save the model checkpoint."""
-        save_dir = "/Users/aarnabar/image-classification/models"
-        data_time_str =  datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        checkpoint_path = f"{save_dir}/{model_type}_{data_time_str}.pth"
-
         torch.save({
             "epoch": epoch + 1,
             "model_state_dict": self.model.state_dict(),

@@ -2,8 +2,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, models
+import datetime
+import os
 
-from model_manager_utility import model_manager
+from model_manager_lib import model_manager
+from config_manager_lib import config_manager
+
 def main():
     """Main function to provide user choices for model operations."""
     while True:
@@ -32,36 +36,61 @@ def main():
 
 def run_model_training():
     """Function to run training epochs for adversarial training."""
-    best_val_acc = 0.0
-    number_of_epochs = 10  # Define the number of epochs
-    print_every_epoch = 1  # Define how often to print progress
 
-    print("Enter the number of epochs for training:")
-    number_of_epochs = int(input().strip())
+    print("\n" + "="*50)
+    print("Running the model training...")
+    config = config_manager("./src/model-training/configuration.json")
+    run_name = config.get_config_value("run_name")
+    train_dir = config.get_config_value("training_data_directory")
+    val_dir   = config.get_config_value("validation_data_directory")
+    number_of_epochs = config.get_config_value("epochs", 10)
+    training_percentage = config.get_config_value("training_percentage", 10)
+    eval_percentage = config.get_config_value("eval_percentage", 10)
+    print_every_epoch = config.get_config_value("print_every_epoch", 1)
 
-    print("Enter the desired level of training (percentage):")
-    training_percentage = int(input().strip())
-
-
-    data_dir = "/Users/aarnabar/image-classification/data/cropped_lisa_1"   # root folder that contains train/ and val/
-    train_dir = f"{data_dir}/train_1"
-    val_dir   = f"{data_dir}/val_1"
-
+    print("\n" + "-"*50)
+    print("Configuration Settings:")
+    print("-"*50)
+    print(f"Run Name                : {run_name}")
+    print(f"Training Directory      : {train_dir}")
+    print(f"Validation Directory    : {val_dir}")
+    print(f"Number of Epochs        : {number_of_epochs}")
+    print(f"Training Percentage     : {training_percentage}%")
+    print(f"Evaluation Percentage   : {eval_percentage}%")
+    print(f"Print Every Epoch       : {print_every_epoch}")
+    print("-"*50)
     
+
+    best_val_acc = 0.0
+    checkpoint_path = ""
+    epoch = 1
+
     base_model = model_manager()
     base_model.load_datasets(train_dir, val_dir)
-    base_model.init_model()    
-    base_model.init_optimizer()                      
+
+    if(config.load_run_configuration())!=None:
+        epoch = int(config.get_last_config_value("epoch", 1)) + 1
+        best_val_acc = config.get_last_config_value("best_val_acc", 0.0)
+        checkpoint_path = config.get_last_config_value("checkpoint_path", "")
+        base_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
+
+        print(f"Resuming training from epoch {epoch} with best val_acc {best_val_acc:.4f}")
+    else:
+        base_model.init_model()    # Load the restnet18 model without any weights
+                  
+
+        
 
 
-    for epoch in range(number_of_epochs):
-        print(f"\nEpoch {epoch + 1}/{number_of_epochs}")
+    
+    while epoch <= number_of_epochs:
+        print(f"\nEpoch {epoch}/{number_of_epochs}")
 
         train_loss, train_acc = base_model.train(training_percentage)
 
-        val_loss, val_acc = base_model.evaluate()
+        val_loss, val_acc = base_model.evaluate(eval_percentage)
 
-        if (epoch + 1) % print_every_epoch == 0:
+        if (epoch) % print_every_epoch == 0:
             print(
                 f"Train loss: {train_loss:.4f} | "
                 f"Train acc: {train_acc:.4f} | "
@@ -69,10 +98,27 @@ def run_model_training():
                 f"Val acc: {val_acc:.4f}"
             )
 
+
+        # Save configuration for the current run
+        run_directory = config.get_config_value("run_directory")
+        run_name = config.get_config_value("run_name")
+        current_run_dir = f"{run_directory}/{run_name}"
+        os.makedirs(current_run_dir, exist_ok=True) 
+
+
         # Save the best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            base_model.save_checkpoint(epoch, val_acc, model_type="BaseModel")
+
+            data_time_str =  datetime.datetime.now().strftime("%Y%m%d_%H%M")
+            checkpoint_path = f"{current_run_dir}/state_{data_time_str}.pth"
+
+            base_model.save_checkpoint(epoch, val_acc, checkpoint_path)
+
+        config.save_run_configuration(epoch, train_loss, train_acc, val_loss, val_acc, best_val_acc, checkpoint_path)
+
+        # Increment epoch counter
+        epoch += 1
 
 
     print("\nTraining finished.")
