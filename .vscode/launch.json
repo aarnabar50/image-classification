@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Debugger: Adversarial Training",
             "type": "debugpy",
             "request": "launch",
-            "program": "src/model-training/adversarial_training.py",
+            "program": "./src/adversarial_training.py",
             "console": "integratedTerminal"
         }
     ]

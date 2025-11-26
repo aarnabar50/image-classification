@@ -6,6 +6,9 @@ from torchvision import datasets, transforms, models
 from tqdm import tqdm
 import datetime
 from PIL import Image
+import os
+from torchvision.utils import save_image
+
 
 class model_manager:
     def __init__(self):
@@ -223,3 +226,55 @@ class model_manager:
         print("Predicted class index:", pred_class)
         print("Predicted class name:", pred_class_name)
         return pred_class_name
+    
+    def generate_adversarial_images(self, parturbed_data_directory):
+        """Generate adversarial images using the Fast Gradient Sign Method (FGSM)."""
+        self.model.eval()
+        os.makedirs(parturbed_data_directory, exist_ok=True)
+
+        epsilon = 0.03
+        total_images = 0
+
+        # Loop through all batches in validation loader
+        loop = tqdm(self.val_loader, desc="Generating adversarial images", leave=False)
+        for batch_idx, (images, labels) in enumerate(loop):
+            images = images.to(self.device)
+            labels = labels.to(self.device)
+
+            # Set requires_grad attribute of tensor. Important for Attack
+            images.requires_grad = True
+
+            # Forward pass the data through the model
+            outputs = self.model(images)
+            loss = self.criterion(outputs, labels)
+
+            # Zero all existing gradients
+            self.model.zero_grad()
+
+            # Calculate gradients of model in backward pass
+            loss.backward()
+
+            # Collect datagrad
+            data_grad = images.grad.data
+
+            # FGSM Attack
+            # Create the perturbed image by adjusting each pixel of the input image
+            perturbed_images = images + epsilon * data_grad.sign()
+            perturbed_images = torch.clamp(perturbed_images, 0, 1)
+
+            # Save the perturbed images to the directory
+            for i, perturbed_img in enumerate(perturbed_images):
+                label = labels[i].item()
+                class_name = self.class_names[label] if self.class_names else str(label)
+                
+                # Create class subdirectory
+                class_dir = os.path.join(parturbed_data_directory, class_name)
+                os.makedirs(class_dir, exist_ok=True)
+                
+                # Save image with unique name using batch_idx and i
+                img_path = os.path.join(class_dir, f"perturbed_batch{batch_idx}_img{i}.png")
+                save_image(perturbed_img, img_path)
+                total_images += 1
+
+        print(f"Saved {total_images} perturbed images to {parturbed_data_directory}")
+
