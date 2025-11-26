@@ -12,7 +12,7 @@ def run_fgsm_attack():
     val_dir   = config.get_config_value("validation_data_directory")
     parturbed_data_directory = config.get_config_value("parturbed_data_directory")
 
-    attack_model.load_evaludation_dataset(val_dir)
+    attack_model.load_evaluation_dataset(val_dir)
     attack_model.init_model()
 
     attack_model.generate_adversarial_images(parturbed_data_directory)
@@ -65,7 +65,7 @@ def run_perturbed_evaluation():
     val_cpu_time = 0
 
     base_model = model_manager()
-    base_model.load_evaludation_dataset(val_dir, batch_size, num_workers)
+    base_model.load_evaluation_dataset(val_dir, batch_size, num_workers)
     base_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
     
 
