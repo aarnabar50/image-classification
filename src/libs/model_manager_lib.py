@@ -165,6 +165,7 @@ class model_manager:
         running_loss = 0.0
         correct = 0
         total = 0
+        total_confidence = 0.0
 
         with torch.no_grad():
             loop = tqdm(self.val_loader, desc="Val", leave=False)
@@ -175,9 +176,13 @@ class model_manager:
                 outputs = self.model(images)
                 loss = self.criterion(outputs, labels)
 
+                # Calculate confidence (softmax probabilities)
+                probs = torch.softmax(outputs, dim=1)
+                confidences, preds = probs.max(1)
+                
                 running_loss += loss.item() * images.size(0)
-                _, preds = outputs.max(1)
                 correct += (preds == labels).sum().item()
+                total_confidence += confidences.sum().item()
                 total += labels.size(0)
 
                 loop.set_postfix(loss=loss.item())
@@ -190,6 +195,7 @@ class model_manager:
 
         epoch_loss = running_loss / total
         epoch_acc = correct / total
+        epoch_avg_confidence = total_confidence / total
 
         epoch_total_images = total  # Total images processed in this epoch
         epoch_time = loop.format_dict['elapsed']  # Time in seconds for this epoch
@@ -197,7 +203,7 @@ class model_manager:
         epoch_cpu_time = epoch_time * torch.get_num_threads()  # Approximate CPU time
         
 
-        return epoch_loss, epoch_acc, epoch_total_images, epoch_time, epoch_latency, epoch_cpu_time
+        return epoch_loss, epoch_acc, epoch_avg_confidence, epoch_total_images, epoch_time, epoch_latency, epoch_cpu_time
 
     def save_checkpoint(self, epoch, val_acc, checkpoint_path):
         """Save the model checkpoint."""
@@ -223,9 +229,10 @@ class model_manager:
             outputs = self.model(tensor)
         pred_class = outputs.argmax(dim=1).item()
         pred_class_name = self.class_names[pred_class] if self.class_names else str(pred_class)
-        print("Predicted class index:", pred_class)
-        print("Predicted class name:", pred_class_name)
-        return pred_class_name
+        probs = torch.softmax(outputs, dim=1)
+        confidence = probs[0, pred_class].item()
+
+        return pred_class_name, confidence
     
     def generate_adversarial_images(self, parturbed_data_directory):
         """Generate adversarial images using the Fast Gradient Sign Method (FGSM)."""
