@@ -20,7 +20,7 @@ class config_manager:
         run_directory = self.config.get("run_directory")
         run_name = self.config.get("run_name")
         current_run_dir = f"{run_directory}/{run_name}"
-        run_config_path = f"{current_run_dir}/run_configuration.json"
+        run_config_path = f"{current_run_dir}/state_configuration.json"
 
         if not os.path.isfile(run_config_path):
             return None
@@ -61,10 +61,10 @@ class config_manager:
             "checkpoint_path": checkpoint_path
         }
 
-        run_config = f"{current_run_dir}/run_configuration.json"
-        with open(run_config, 'w') as f:
+        state_config = f"{current_run_dir}/state_configuration.json"
+        with open(state_config, 'w') as f:
             json.dump(config_data, f, indent=4)
-        print(f"Configuration saved to {run_config}")
+        print(f"State configuration saved to {state_config}")
 
         csv_file = f"{current_run_dir}/run_stats.csv"
         file_exists = os.path.isfile(csv_file)
@@ -74,5 +74,10 @@ class config_manager:
             if not file_exists:
                 writer.writeheader()
             writer.writerow(config_data)
+
+        run_config = f"{current_run_dir}/run_configuration.json"
+        with open(run_config, 'w') as f:
+            json.dump(self.config, f, indent=4)
+        print(f"Run configuration saved to {run_config}")
 
         

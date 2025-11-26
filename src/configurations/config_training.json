@@ -5,6 +5,8 @@
     "training_percentage": 100,
     "eval_percentage": 100,
     "print_every_epoch": 1,
-    "epochs": 2,
+    "epochs": 10,
+    "batch_size": 32,
+    "num_workers": 4,    
     "run_directory": "/Users/aarnabar/image-classification/runs"
 }

@@ -35,32 +35,33 @@ class model_manager:
         ])
 
 
-    def load_training_dataset(self, train_dir):
+    def load_training_dataset(self, train_dir, in_batch_size, in_num_workers):
         """Initialize the data sets for training and validation datasets."""
 
         train_dataset = datasets.ImageFolder(root=str(train_dir), transform=self.train_transform)
 
-        batch_size = 32
-        num_workers = 1
+        batch_size = in_batch_size
+        num_workers = in_num_workers
 
         self.train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
             shuffle=True,  # changed to True for training
             num_workers=num_workers,
-            pin_memory=False
+            pin_memory=False,
+            persistent_workers=True
         )
 
         self.class_names = train_dataset.classes
         self.num_classes = len(self.class_names)
 
-    def load_evaludation_dataset(self, val_dir):
+    def load_evaludation_dataset(self, val_dir, in_batch_size, in_num_workers):
         """Initialize the data sets for training and validation datasets."""
 
         val_dataset   = datasets.ImageFolder(root=str(val_dir), transform=self.val_transform)
 
-        batch_size = 32
-        num_workers = 1
+        batch_size = in_batch_size
+        num_workers = in_num_workers
 
 
         self.val_loader = DataLoader(
@@ -68,7 +69,8 @@ class model_manager:
             batch_size=batch_size,
             shuffle=False,   # changed to False for validation
             num_workers=num_workers,
-            pin_memory=False
+            pin_memory=False,
+            persistent_workers=True
         )
 
         self.class_names = val_dataset.classes
@@ -76,11 +78,10 @@ class model_manager:
 
 
 
-    def load_datasets(self, train_dir, val_dir):
+    def load_datasets(self, train_dir, val_dir, in_batch_size, in_num_workers):
         """Initialize the data sets for training and validation datasets."""
-        self.load_training_dataset(train_dir)
-        self.load_evaludation_dataset(val_dir)
-
+        self.load_training_dataset(train_dir, in_batch_size, in_num_workers)
+        self.load_evaludation_dataset(val_dir, in_batch_size, in_num_workers)
 
     def init_model(self, state_dict_path=None):
         """Initialize the model, loss function, and optimizer."""
@@ -96,22 +97,26 @@ class model_manager:
             self.model = models.resnet18(num_classes=self.num_classes)
             self.model.load_state_dict(checkpoint['model_state_dict'])
             print("State dict loaded from:", state_dict_path)
+            # Model already has trained fc layer, just move to device and setup optimizer
+            self.model = self.model.to(self.device)
+            self.init_optimizer(replace_fc=False)
         else:
             self.model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
             print("Initialized new model.")
-            
+            # New model needs fc layer replaced for custom num_classes
+            self.init_optimizer(replace_fc=True)
 
-        self.init_optimizer()
 
-
-    def init_optimizer(self):
+    def init_optimizer(self, replace_fc=True):
         """Initialize optimizers."""
         learning_rate = 1e-4
         weight_decay = 1e-4
         
-        in_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(in_features, self.num_classes)  # replace final layer
-        self.model = self.model.to(self.device)
+        # Only replace fc layer if training from scratch (not loading checkpoint)
+        if replace_fc:
+            in_features = self.model.fc.in_features
+            self.model.fc = nn.Linear(in_features, self.num_classes)  # replace final layer
+            self.model = self.model.to(self.device)
 
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay) 

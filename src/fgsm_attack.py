@@ -30,6 +30,8 @@ def run_perturbed_evaluation():
     val_dir   = config.get_config_value("validation_data_directory")
     number_of_epochs = config.get_config_value("epochs", 10)
     eval_percentage = config.get_config_value("eval_percentage", 10)
+    batch_size = config.get_config_value("batch_size", 32)
+    num_workers = config.get_config_value("num_workers", 4)
     print_every_epoch = config.get_config_value("print_every_epoch", 1)
     checkpoint_path = config.get_config_value("checkpoint_path")
 
@@ -40,6 +42,8 @@ def run_perturbed_evaluation():
     print(f"Validation Directory    : {val_dir}")
     print(f"Number of Epochs        : {number_of_epochs}")
     print(f"Evaluation Percentage   : {eval_percentage}%")
+    print(f"Batch Size              : {batch_size}")
+    print(f"Number of Workers       : {num_workers}")
     print(f"Print Every Epoch       : {print_every_epoch}")
     print(f"Checkpoint Path         : {checkpoint_path}")
     print("-"*50)
@@ -61,7 +65,7 @@ def run_perturbed_evaluation():
     val_cpu_time = 0
 
     base_model = model_manager()
-    base_model.load_evaludation_dataset(val_dir)
+    base_model.load_evaludation_dataset(val_dir, batch_size, num_workers)
     base_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
     
 

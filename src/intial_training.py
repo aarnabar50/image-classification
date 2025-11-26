@@ -17,6 +17,8 @@ def run_model_training():
     number_of_epochs = config.get_config_value("epochs", 10)
     training_percentage = config.get_config_value("training_percentage", 10)
     eval_percentage = config.get_config_value("eval_percentage", 10)
+    batch_size = config.get_config_value("batch_size", 32)
+    num_workers = config.get_config_value("num_workers", 4)
     print_every_epoch = config.get_config_value("print_every_epoch", 1)
 
     print("\n" + "-"*50)
@@ -28,6 +30,8 @@ def run_model_training():
     print(f"Number of Epochs        : {number_of_epochs}")
     print(f"Training Percentage     : {training_percentage}%")
     print(f"Evaluation Percentage   : {eval_percentage}%")
+    print(f"Batch Size              : {batch_size}")
+    print(f"Number of Workers       : {num_workers}")
     print(f"Print Every Epoch       : {print_every_epoch}")
     print("-"*50)
     
@@ -50,15 +54,16 @@ def run_model_training():
     val_cpu_time = 0
 
     base_model = model_manager()
-    base_model.load_datasets(train_dir, val_dir)
+    base_model.load_datasets(train_dir, val_dir, batch_size, num_workers)
 
     if(config.load_run_configuration())!=None:
         epoch = int(config.get_last_config_value("epoch", 1)) + 1
         best_val_acc = config.get_last_config_value("best_val_acc", 0.0)
         checkpoint_path = config.get_last_config_value("checkpoint_path", "")
+
         base_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
 
-        print(f"Resuming training from epoch {epoch} with best val_acc {best_val_acc:.4f}")
+        print(f"Resuming training from epoch {epoch} with best val_acc {best_val_acc:.4f} and weights from {checkpoint_path}")
     else:
         base_model.init_model()    # Load the restnet18 model without any weights
                   

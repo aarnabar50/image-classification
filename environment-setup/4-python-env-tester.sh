@@ -12,7 +12,11 @@ python3 -m pip install torch torchvision
 
 # Create and use a virtualenv (recommended)
 python3 -m venv .venv
+
+# Activate the virtual environment
 source .venv/bin/activate
+
+# Upgrade pip and install torch within the virtual environment
 python3 -m pip install --upgrade pip
 python3 -m pip install torch torchvision
 
