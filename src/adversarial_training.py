@@ -6,7 +6,7 @@ from libs.model_manager_lib import model_manager
 from libs.config_manager_lib import config_manager
 
 from intial_training import run_model_training, run_inference_mode
-from fgsm_attack import run_fgsm_attack, run_perturbed_evaluation
+from fgsm_attack import run_fgsm_attack, run_pgd_attack, run_perturbed_evaluation
 
 def main():
     """Main function to provide user choices for model operations."""
@@ -20,8 +20,9 @@ def main():
         print("="*50)
         print("1. Train the basic model")
         print("2. Run model in inference mode")
-        print("3. Run adversarial training")
-        print("4. Run evaluation on adversarial images")
+        print("3. Generate adversarial images using FGSM attacks")
+        print("4. Generate adversarial images using PGD attacks")
+        print("5. Run evaluation on adversarial images")
         print("0. Quit")
         print("="*50)
         
@@ -40,6 +41,9 @@ def main():
             print("Running FGSM adversarial attack...")
             run_fgsm_attack()
         elif choice == '4':
+            print("Running PGD adversarial attack...")
+            run_pgd_attack()
+        elif choice == '5':
             print("Running evaluation on adversarial images...")
             run_perturbed_evaluation()
         else:

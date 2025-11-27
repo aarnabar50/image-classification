@@ -239,54 +239,77 @@ class model_manager:
 
         return pred_class_name, confidence
     
-    def generate_adversarial_images(self, parturbed_data_directory):
-        """Generate adversarial images using the Fast Gradient Sign Method (FGSM)."""
+
+    def generate_adversarial_images(self, perturbed_data_directory, epsilon=0.03, 
+                                    num_steps=1, step_size=None, normalized=False):
+        """
+        Generate adversarial images using FGSM or PGD.
+        
+        Args:
+            perturbed_data_directory: Output directory for adversarial images
+            epsilon: Maximum perturbation magnitude (L-infinity norm)
+            num_steps: Number of PGD iterations (1 = FGSM)
+            step_size: Step size for PGD (default: epsilon for FGSM, epsilon/4 for PGD)
+            normalized: Whether images are normalized (adjusts clamp bounds)
+        """
         self.model.eval()
-        os.makedirs(parturbed_data_directory, exist_ok=True)
-
-        epsilon = 0.03
+        os.makedirs(perturbed_data_directory, exist_ok=True)
+        
+        # Compute valid pixel range if images are normalized
+        if normalized and hasattr(self, 'val_transform'):
+            # Extract mean/std from Normalize transform
+            normalize = [t for t in self.val_transform.transforms if isinstance(t, transforms.Normalize)]
+            if normalize:
+                mean = torch.tensor(normalize[0].mean).view(3, 1, 1).to(self.device)
+                std = torch.tensor(normalize[0].std).view(3, 1, 1).to(self.device)
+                pixel_min = (0 - mean) / std
+                pixel_max = (1 - mean) / std
+            else:
+                pixel_min, pixel_max = 0, 1
+        else:
+            pixel_min, pixel_max = 0, 1
+        
+        step_size = step_size or (epsilon if num_steps == 1 else epsilon / 4)
         total_images = 0
-
-        # Loop through all batches in validation loader
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
         loop = tqdm(self.val_loader, desc="Generating adversarial images", leave=False)
         for batch_idx, (images, labels) in enumerate(loop):
             images = images.to(self.device)
             labels = labels.to(self.device)
-
-            # Set requires_grad attribute of tensor. Important for Attack
-            images.requires_grad = True
-
-            # Forward pass the data through the model
-            outputs = self.model(images)
-            loss = self.criterion(outputs, labels)
-
-            # Zero all existing gradients
-            self.model.zero_grad()
-
-            # Calculate gradients of model in backward pass
-            loss.backward()
-
-            # Collect datagrad
-            data_grad = images.grad.data
-
-            # FGSM Attack
-            # Create the perturbed image by adjusting each pixel of the input image
-            perturbed_images = images + epsilon * data_grad.sign()
-            perturbed_images = torch.clamp(perturbed_images, 0, 1)
-
-            # Save the perturbed images to the directory
-            for i, perturbed_img in enumerate(perturbed_images):
+            
+            # PGD attack (FGSM if num_steps=1)
+            perturbed = images.clone().detach()
+            perturbed.requires_grad = True
+            
+            for step in range(num_steps):
+                outputs = self.model(perturbed)
+                loss = self.criterion(outputs, labels)
+                self.model.zero_grad()
+                loss.backward()
+                
+                # Take gradient step
+                grad = perturbed.grad.data
+                perturbed = perturbed.detach() + step_size * grad.sign()
+                
+                # Project back to epsilon ball around original image
+                perturbed = torch.max(torch.min(perturbed, images + epsilon), images - epsilon)
+                perturbed = torch.clamp(perturbed, pixel_min, pixel_max)
+                perturbed.requires_grad = True
+            
+            # Save perturbed images
+            for i, perturbed_img in enumerate(perturbed.detach()):
                 label = labels[i].item()
                 class_name = self.class_names[label] if self.class_names else str(label)
                 
-                # Create class subdirectory
-                class_dir = os.path.join(parturbed_data_directory, class_name)
+                class_dir = f"{perturbed_data_directory}/{class_name}"
                 os.makedirs(class_dir, exist_ok=True)
                 
-                # Save image with unique name using batch_idx and i
-                img_path = os.path.join(class_dir, f"perturbed_batch{batch_idx}_img{i}.png")
+                # Unique filename with timestamp to avoid collisions
+                img_path = f"{class_dir}/adv_{timestamp}_batch{batch_idx:04d}_img{i:03d}.png"
                 save_image(perturbed_img, img_path)
                 total_images += 1
-
-        print(f"Saved {total_images} perturbed images to {parturbed_data_directory}")
+        
+        print(f"Saved {total_images} adversarial images to {perturbed_data_directory}")
+        print(f"Attack: {'FGSM' if num_steps == 1 else f'PGD-{num_steps}'}, epsilon={epsilon}")
 

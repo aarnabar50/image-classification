@@ -8,16 +8,70 @@ def run_fgsm_attack():
     """Function to run the model to generate images with FGSM attack."""
 
     attack_model = model_manager()
-    config = config_manager("./src/configurations/config_attack.json")
+    config = config_manager("./src/configurations/config_attack_fgsm.json")
     val_dir   = config.get_config_value("validation_data_directory")
-    parturbed_data_directory = config.get_config_value("parturbed_data_directory")
+    perturbed_data_directory = config.get_config_value("perturbed_data_directory")
+    epsilon = config.get_config_value("epsilon", 0.03)
+    num_steps = config.get_config_value("num_steps", 1)
+    step_size = config.get_config_value("step_size", None)
+    normalized = config.get_config_value("normalized", False)
+    batch_size = config.get_config_value("batch_size", 32)
+    num_workers = config.get_config_value("num_workers", 4)
 
-    attack_model.load_evaluation_dataset(val_dir)
+    print("\n" + "="*50)
+    print("Configuration Settings for FGSM Attack:")
+    print("-"*50)
+    print(f"Validation Directory        : {val_dir}")
+    print(f"Perturbed Data Directory    : {perturbed_data_directory}")
+    print(f"Epsilon                     : {epsilon}")
+    print(f"Number of Steps             : {num_steps}")
+    print(f"Step Size                   : {step_size}")
+    print(f"Normalized                  : {normalized}")
+    print(f"Batch Size                  : {batch_size}")
+    print(f"Number of Workers           : {num_workers}")
+    print("-"*50)
+
+    attack_model.load_evaluation_dataset(val_dir, batch_size, num_workers)
     attack_model.init_model()
 
-    attack_model.generate_adversarial_images(parturbed_data_directory)
+    attack_model.generate_adversarial_images(perturbed_data_directory, epsilon, num_steps, step_size, normalized)
 
-    print(f"\nAdversarial images generated and saved to {parturbed_data_directory}")
+    print(f"\nAdversarial images generated and saved to {perturbed_data_directory}")
+
+
+def run_pgd_attack():
+    """Function to run the model to generate images with PGD attack."""
+
+    attack_model = model_manager()
+    config = config_manager("./src/configurations/config_attack_pgd.json")
+    val_dir   = config.get_config_value("validation_data_directory")
+    perturbed_data_directory = config.get_config_value("perturbed_data_directory")
+    epsilon = config.get_config_value("epsilon", 0.03)
+    num_steps = config.get_config_value("num_steps", 1)
+    step_size = config.get_config_value("step_size", None)
+    normalized = config.get_config_value("normalized", False)
+    batch_size = config.get_config_value("batch_size", 32)
+    num_workers = config.get_config_value("num_workers", 4)
+
+    print("\n" + "="*50)
+    print("Configuration Settings for FGSM Attack:")
+    print("-"*50)
+    print(f"Validation Directory        : {val_dir}")
+    print(f"Perturbed Data Directory    : {perturbed_data_directory}")
+    print(f"Epsilon                     : {epsilon}")
+    print(f"Number of Steps             : {num_steps}")
+    print(f"Step Size                   : {step_size}")
+    print(f"Normalized                  : {normalized}")
+    print(f"Batch Size                  : {batch_size}")
+    print(f"Number of Workers           : {num_workers}")
+    print("-"*50)
+
+    attack_model.load_evaluation_dataset(val_dir, batch_size, num_workers)
+    attack_model.init_model()
+
+    attack_model.generate_adversarial_images(perturbed_data_directory, epsilon, num_steps, step_size, normalized)
+
+    print(f"\nAdversarial images generated and saved to {perturbed_data_directory}")
 
 
 def run_perturbed_evaluation():

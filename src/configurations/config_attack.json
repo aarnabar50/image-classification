@@ -1,4 +1,0 @@
-{
-    "validation_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/val_1",
-    "parturbed_data_directory": "/Users/aarnabar/image-classification/data/parturbed_test_dataset"   
-}
