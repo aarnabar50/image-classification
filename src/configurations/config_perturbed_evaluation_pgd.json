@@ -1,0 +1,9 @@
+{
+    "validation_data_directory": "/Users/aarnabar/image-classification/data/perturbed_images_pgd_01",
+    "run_name": "pgd_eval_002",
+    "checkpoint_path": "/Users/aarnabar/image-classification/runs/basic_training_004/state_20251126_1020.pth",
+    "eval_percentage": 100,
+    "print_every_epoch": 1,
+    "epochs": 10,
+    "run_directory": "/Users/aarnabar/image-classification/runs"
+}

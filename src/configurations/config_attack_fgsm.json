@@ -1,7 +1,7 @@
 {
     "validation_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/val_1",
-    "perturbed_data_directory": "/Users/aarnabar/image-classification/data/perturbed_images_fgsm_01",
-    "epsilon": 0.03,
+    "perturbed_data_directory": "/Users/aarnabar/image-classification/data/perturbed_images_fgsm_02",
+    "epsilon": 0.3,
     "num_steps": 1,
     "step_size": null,
     "normalized": false,

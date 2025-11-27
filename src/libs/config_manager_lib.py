@@ -30,10 +30,23 @@ class config_manager:
         return self.last_run_config
 
 
-    def save_run_configuration(self, epoch, 
-                               train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time,
-                               val_loss, val_acc, epoch_avg_confidence, val_total_images, val_time, val_latency, val_cpu_time,
-                               best_val_acc, checkpoint_path):
+    def save_run_configuration(self, 
+                                    epoch, 
+                                    train_loss, 
+                                    train_acc, 
+                                    train_total_images, 
+                                    train_time, 
+                                    train_latency, 
+                                    train_cpu_time,
+                                    val_loss, 
+                                    val_acc, 
+                                    epoch_avg_confidence, 
+                                    val_total_images, 
+                                    val_time, 
+                                    val_latency, 
+                                    val_cpu_time,
+                                    best_val_acc, 
+                                    checkpoint_path):
         run_directory = self.config.get("run_directory")
         run_name = self.config.get("run_name")
         current_run_dir = f"{run_directory}/{run_name}"

@@ -1,9 +1,0 @@
-{
-    "validation_data_directory": "/Users/aarnabar/image-classification/data/parturbed_test_dataset",
-    "run_name": "parturbed_eval_001",
-    "checkpoint_path": "/Users/aarnabar/image-classification/runs/basic_training_003/state_20251125_1731.pth",
-    "eval_percentage": 100,
-    "print_every_epoch": 1,
-    "epochs": 2,
-    "run_directory": "/Users/aarnabar/image-classification/runs"
-}

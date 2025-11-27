@@ -6,7 +6,7 @@ from libs.model_manager_lib import model_manager
 from libs.config_manager_lib import config_manager
 
 from intial_training import run_model_training, run_inference_mode
-from fgsm_attack import run_fgsm_attack, run_pgd_attack, run_perturbed_evaluation
+from fgsm_attack import generate_adversarial_images, run_perturbed_evaluation
 
 def main():
     """Main function to provide user choices for model operations."""
@@ -22,7 +22,8 @@ def main():
         print("2. Run model in inference mode")
         print("3. Generate adversarial images using FGSM attacks")
         print("4. Generate adversarial images using PGD attacks")
-        print("5. Run evaluation on adversarial images")
+        print("5. Run evaluation on FGSM adversarial images")
+        print("6. Run evaluation on PGD adversarial images")
         print("0. Quit")
         print("="*50)
         
@@ -39,13 +40,16 @@ def main():
             run_inference_mode()
         elif choice == '3':
             print("Running FGSM adversarial attack...")
-            run_fgsm_attack()
+            generate_adversarial_images("./src/configurations/config_attack_fgsm.json")
         elif choice == '4':
             print("Running PGD adversarial attack...")
-            run_pgd_attack()
+            generate_adversarial_images("./src/configurations/config_attack_pgd.json")
         elif choice == '5':
-            print("Running evaluation on adversarial images...")
-            run_perturbed_evaluation()
+            print("Running evaluation on FGSM adversarial images...")
+            run_perturbed_evaluation("./src/configurations/config_perturbed_evaluation_fgsm.json")
+        elif choice == '6':
+            print("Running evaluation on PGD adversarial images...")
+            run_perturbed_evaluation("./src/configurations/config_perturbed_evaluation_pgd.json")
         else:
             print("Invalid choice. Please try again.")
 
