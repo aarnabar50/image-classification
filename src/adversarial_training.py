@@ -5,7 +5,7 @@ import os
 from libs.model_manager_lib import model_manager
 from libs.config_manager_lib import config_manager
 
-from intial_training import run_model_training, run_inference_mode
+from model_training import run_model_training, run_inference_mode
 from fgsm_attack import generate_adversarial_images, run_perturbed_evaluation
 
 def main():
@@ -18,12 +18,13 @@ def main():
         print("\n" + "="*50)
         print("Adversarial Training - Model Operations")
         print("="*50)
-        print("1. Train the basic model")
-        print("2. Run model in inference mode")
+        print("1. Train the resetnet18 model with baseline images")
+        print("2. Run the model in inference mode")
         print("3. Generate adversarial images using FGSM attacks")
         print("4. Generate adversarial images using PGD attacks")
         print("5. Run evaluation on FGSM adversarial images")
         print("6. Run evaluation on PGD adversarial images")
+        print("7. Train the model using YOPO adversarial training")
         print("0. Quit")
         print("="*50)
         
@@ -33,8 +34,8 @@ def main():
             print("Exiting...")
             break
         elif choice == '1':
-            print("Training the basic model...")            
-            run_model_training()
+            print("Running baseline training...")            
+            run_model_training("./src/configurations/config_training_baseline.json", "Baseline")
         elif choice == '2':
             print("Running model in inference mode...")
             run_inference_mode()
@@ -50,6 +51,9 @@ def main():
         elif choice == '6':
             print("Running evaluation on PGD adversarial images...")
             run_perturbed_evaluation("./src/configurations/config_perturbed_evaluation_pgd.json")
+        elif choice == '7':
+            print("Running YOPO YOPO training...")
+            run_model_training("./src/configurations/config_training_yopo.json", "YOPO")
         else:
             print("Invalid choice. Please try again.")
 

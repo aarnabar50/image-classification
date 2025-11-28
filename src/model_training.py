@@ -5,37 +5,13 @@ from libs.model_manager_lib import model_manager
 from libs.config_manager_lib import config_manager
 
 
-def run_model_training():
+def run_model_training(config_path="./src/configurations/config_training_baseline.json", Training_Type="Baseline"):
     """Function to run training epochs for adversarial training."""
 
     print("\n" + "="*50)
     print("Running the model training...")
-    config = config_manager("./src/configurations/config_training.json")
-    run_name = config.get_config_value("run_name")
-    train_dir = config.get_config_value("training_data_directory")
-    val_dir   = config.get_config_value("validation_data_directory")
-    number_of_epochs = config.get_config_value("epochs", 10)
-    training_percentage = config.get_config_value("training_percentage", 10)
-    eval_percentage = config.get_config_value("eval_percentage", 10)
-    batch_size = config.get_config_value("batch_size", 32)
-    num_workers = config.get_config_value("num_workers", 4)
-    print_every_epoch = config.get_config_value("print_every_epoch", 1)
 
-    print("\n" + "-"*50)
-    print("Configuration Settings:")
-    print("-"*50)
-    print(f"Run Name                : {run_name}")
-    print(f"Training Directory      : {train_dir}")
-    print(f"Validation Directory    : {val_dir}")
-    print(f"Number of Epochs        : {number_of_epochs}")
-    print(f"Training Percentage     : {training_percentage}%")
-    print(f"Evaluation Percentage   : {eval_percentage}%")
-    print(f"Batch Size              : {batch_size}")
-    print(f"Number of Workers       : {num_workers}")
-    print(f"Print Every Epoch       : {print_every_epoch}")
-    print("-"*50)
-    
-
+    # Initialize variables
     best_val_acc = 0.0
     checkpoint_path = ""
     epoch = 1
@@ -53,6 +29,45 @@ def run_model_training():
     val_latency = 0
     val_cpu_time = 0
 
+    # Load configuration
+    config = config_manager(config_path)
+    run_name = config.get_config_value("run_name")
+    train_dir = config.get_config_value("training_data_directory")
+    val_dir   = config.get_config_value("validation_data_directory")
+    number_of_epochs = config.get_config_value("epochs", 10)
+    training_percentage = config.get_config_value("training_percentage", 10)
+    eval_percentage = config.get_config_value("eval_percentage", 10)
+    batch_size = config.get_config_value("batch_size", 32)
+    num_workers = config.get_config_value("num_workers", 4)
+    print_every_epoch = config.get_config_value("print_every_epoch", 1)
+    print(f"Training Type          : {Training_Type}")
+    if Training_Type=="YOPO":
+        epsilon= config.get_config_value("epsilon", 0.03)
+        num_steps= config.get_config_value("num_steps", 5)
+        step_size= config.get_config_value("step_size", 0.007)
+        checkpoint_path = config.get_config_value("checkpoint_path")
+
+
+    print("\n" + "-"*50)
+    print("Configuration Settings:")
+    print("-"*50)
+    print(f"Run Name                : {run_name}")
+    print(f"Training Directory      : {train_dir}")
+    print(f"Validation Directory    : {val_dir}")
+    print(f"Number of Epochs        : {number_of_epochs}")
+    print(f"Training Percentage     : {training_percentage}%")
+    print(f"Evaluation Percentage   : {eval_percentage}%")
+    print(f"Batch Size              : {batch_size}")
+    print(f"Number of Workers       : {num_workers}")
+    print(f"Print Every Epoch       : {print_every_epoch}")
+    if Training_Type=="YOPO":
+        print(f"Epsilon                : {epsilon}")
+        print(f"Number of Steps        : {num_steps}")
+        print(f"Step Size              : {step_size}")
+        print(f"Checkpoint Path        : {checkpoint_path}")
+    print("-"*50)
+    
+
     base_model = model_manager()
     base_model.load_datasets(train_dir, val_dir, batch_size, num_workers)
 
@@ -65,13 +80,23 @@ def run_model_training():
 
         print(f"Resuming training from epoch {epoch} with best val_acc {best_val_acc:.4f} and weights from {checkpoint_path}")
     else:
-        base_model.init_model()    # Load the restnet18 model without any weights
+        if Training_Type=="YOPO":
+            base_model.init_model(checkpoint_path)
+            print(f"This is an YOPO training. Loaded initial weights from {checkpoint_path}")
+        else:
+            base_model.init_model()    # Load resnet 18 model with random weights
+            print("Starting fresh training with random initialized weights.")
+
+
                   
 
     while epoch <= number_of_epochs:
         print(f"\nEpoch {epoch}/{number_of_epochs}")
 
-        train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train(training_percentage)
+        if Training_Type=="YOPO":
+            train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train_yopo(training_percentage, epsilon, num_steps, step_size)
+        else:
+            train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train(training_percentage)
 
         val_loss, val_acc, val_avg_confidence, val_total_images, val_time, val_latency, val_cpu_time = base_model.evaluate(eval_percentage)
 
