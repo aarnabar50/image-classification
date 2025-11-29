@@ -31,22 +31,22 @@ class config_manager:
 
 
     def save_run_configuration(self, 
-                                    epoch, 
-                                    train_loss, 
-                                    train_acc, 
-                                    train_total_images, 
-                                    train_time, 
-                                    train_latency, 
-                                    train_cpu_time,
-                                    val_loss, 
-                                    val_acc, 
-                                    epoch_avg_confidence, 
-                                    val_total_images, 
-                                    val_time, 
-                                    val_latency, 
-                                    val_cpu_time,
-                                    best_val_acc, 
-                                    checkpoint_path):
+                                    epoch =0, 
+                                    train_loss =0.0, 
+                                    train_acc =0.0, 
+                                    train_total_images =0, 
+                                    train_time =0.0, 
+                                    train_latency =0.0, 
+                                    train_cpu_time =0.0,
+                                    val_loss =0.0, 
+                                    val_acc =0.0, 
+                                    epoch_avg_confidence =0.0, 
+                                    val_total_images =0, 
+                                    val_time =0.0, 
+                                    val_latency =0.0, 
+                                    val_cpu_time =0.0,
+                                    best_val_acc =0.0, 
+                                    checkpoint_path=""):
         run_directory = self.config.get("run_directory")
         run_name = self.config.get("run_name")
         current_run_dir = f"{run_directory}/{run_name}"
@@ -70,7 +70,7 @@ class config_manager:
             "val_time": val_time,
             "val_latency": val_latency,
             "val_cpu_time": val_cpu_time,
-            "best_val_acc": best_val_acc,
+            "best_val_acc": best_val_acc,   #In case for autoencoder training, this is best_val_loss
             "checkpoint_path": checkpoint_path
         }
 
