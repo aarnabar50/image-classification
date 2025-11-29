@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms
 from tqdm import tqdm
 from PIL import Image
 import os
 from torchvision.utils import save_image
+from pathlib import Path
 
 
 class ImageAutoEncoder(nn.Module):
@@ -74,7 +75,7 @@ class ImageAutoEncoder(nn.Module):
             
             # 112x112x64 -> 224x224x3
             nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),
-            nn.Tanh()  # Output in [-1, 1] range (adjust based on your normalization)
+            # No activation - output matches normalized image range
         )
     
     def forward(self, x):
@@ -90,6 +91,60 @@ class ImageAutoEncoder(nn.Module):
         reconstructed = self.decoder(x)
         
         return reconstructed, latent
+
+
+class PairedImageDataset(Dataset):
+    """
+    Dataset that pairs adversarial images with their corresponding clean images.
+    Handles different file extensions (.jpg, .png) by matching on filename stem.
+    """
+    def __init__(self, adversarial_dir, clean_dir, transform=None):
+        self.adversarial_dir = Path(adversarial_dir)
+        self.clean_dir = Path(clean_dir)
+        self.transform = transform
+        self.pairs = []
+        
+        # Build pairs by matching filenames (ignoring extensions)
+        for class_dir in sorted(self.adversarial_dir.iterdir()):
+            if not class_dir.is_dir():
+                continue
+            
+            class_name = class_dir.name
+            clean_class_dir = self.clean_dir / class_name
+            
+            if not clean_class_dir.exists():
+                print(f"Warning: Clean directory for class '{class_name}' not found")
+                continue
+            
+            # Get all adversarial images
+            adv_images = {f.stem: f for f in class_dir.iterdir() 
+                         if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']}
+            
+            # Match with clean images
+            for clean_img in clean_class_dir.iterdir():
+                if clean_img.suffix.lower() not in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']:
+                    continue
+                
+                stem = clean_img.stem
+                if stem in adv_images:
+                    self.pairs.append((adv_images[stem], clean_img))
+        
+        print(f"Found {len(self.pairs)} paired images")
+    
+    def __len__(self):
+        return len(self.pairs)
+    
+    def __getitem__(self, idx):
+        adv_path, clean_path = self.pairs[idx]
+        
+        adv_img = Image.open(adv_path).convert('RGB')
+        clean_img = Image.open(clean_path).convert('RGB')
+        
+        if self.transform:
+            adv_img = self.transform(adv_img)
+            clean_img = self.transform(clean_img)
+        
+        return adv_img, clean_img
 
 
 class autoencoder_manager:
@@ -156,30 +211,17 @@ class autoencoder_manager:
         if self.autoencoder is None:
             raise RuntimeError("Autoencoder not initialized. Call init_autoencoder() first.")
         
-        # Load adversarial dataset
-        adversarial_dataset = datasets.ImageFolder(
-            root=str(adversarial_data_dir), 
+        # Load paired dataset
+        paired_dataset = PairedImageDataset(
+            adversarial_dir=adversarial_data_dir,
+            clean_dir=clean_data_dir,
             transform=self.val_transform
         )
         
-        adversarial_loader = DataLoader(
-            adversarial_dataset,
+        paired_loader = DataLoader(
+            paired_dataset,
             batch_size=batch_size,
-            shuffle=True,
-            num_workers=num_workers,
-            pin_memory=False
-        )
-        
-        # Load clean dataset
-        clean_dataset = datasets.ImageFolder(
-            root=str(clean_data_dir),
-            transform=self.val_transform
-        )
-        
-        clean_loader = DataLoader(
-            clean_dataset,
-            batch_size=batch_size,
-            shuffle=True,
+            shuffle=True,  # Can shuffle now because pairs are maintained
             num_workers=num_workers,
             pin_memory=False
         )
@@ -187,26 +229,19 @@ class autoencoder_manager:
         self.autoencoder.train()
         running_loss = 0.0
         total = 0
+        first_batch = True
         
-        # Create iterator for clean images
-        print("Training: Creating iterator for clean images...")
-        clean_iter = iter(clean_loader)
-        print("Interator created.")
-        
-        loop = tqdm(adversarial_loader, desc="Training AutoEncoder", leave=False)
-        for adv_images, _ in loop:
-            # Get corresponding clean images
-            try:
-                clean_images, _ = next(clean_iter)
-            except StopIteration:
-                print("Restarting clean image iterator...")
-                clean_iter = iter(clean_loader)
-                clean_images, _ = next(clean_iter)
+        loop = tqdm(paired_loader, desc="Training AutoEncoder", leave=False)
+        for adv_images, clean_images in loop:
+            adv_images = adv_images.to(self.device)
+            clean_images = clean_images.to(self.device)
             
-            # Ensure batch sizes match
-            batch_size_actual = min(adv_images.size(0), clean_images.size(0))
-            adv_images = adv_images[:batch_size_actual].to(self.device)
-            clean_images = clean_images[:batch_size_actual].to(self.device)
+            # Debug: print ranges of first batch
+            if first_batch:
+                print(f"\nDEBUG First Batch:")
+                print(f"  Adv images range: [{adv_images.min():.3f}, {adv_images.max():.3f}]")
+                print(f"  Clean images range: [{clean_images.min():.3f}, {clean_images.max():.3f}]")
+                first_batch = False
             
             # Forward pass: reconstruct clean images from adversarial inputs
             self.autoencoder_optimizer.zero_grad()
@@ -220,6 +255,7 @@ class autoencoder_manager:
             self.autoencoder_optimizer.step()
             
             # Track metrics
+            batch_size_actual = adv_images.size(0)
             running_loss += loss.item() * batch_size_actual
             total += batch_size_actual
             
@@ -258,26 +294,15 @@ class autoencoder_manager:
         if self.autoencoder is None:
             raise RuntimeError("Autoencoder not initialized. Call init_autoencoder() first.")
         
-        adversarial_dataset = datasets.ImageFolder(
-            root=str(adversarial_data_dir), 
+        # Load paired dataset
+        paired_dataset = PairedImageDataset(
+            adversarial_dir=adversarial_data_dir,
+            clean_dir=clean_data_dir,
             transform=self.val_transform
         )
         
-        adversarial_loader = DataLoader(
-            adversarial_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=num_workers,
-            pin_memory=False
-        )
-        
-        clean_dataset = datasets.ImageFolder(
-            root=str(clean_data_dir),
-            transform=self.val_transform
-        )
-        
-        clean_loader = DataLoader(
-            clean_dataset,
+        paired_loader = DataLoader(
+            paired_dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
@@ -288,27 +313,16 @@ class autoencoder_manager:
         running_loss = 0.0
         total = 0
         
-        print("Evaluation: Creating iterator for clean images...")
-        clean_iter = iter(clean_loader)
-        print("Iterator created.")
-        
         with torch.no_grad():
-            loop = tqdm(adversarial_loader, desc="Evaluating AutoEncoder", leave=False)
-            for adv_images, _ in loop:
-                try:
-                    clean_images, _ = next(clean_iter)
-                except StopIteration:
-                    print("Restarting clean image iterator...")
-                    clean_iter = iter(clean_loader)
-                    clean_images, _ = next(clean_iter)
-                
-                batch_size_actual = min(adv_images.size(0), clean_images.size(0))
-                adv_images = adv_images[:batch_size_actual].to(self.device)
-                clean_images = clean_images[:batch_size_actual].to(self.device)
+            loop = tqdm(paired_loader, desc="Evaluating AutoEncoder", leave=False)
+            for adv_images, clean_images in loop:
+                adv_images = adv_images.to(self.device)
+                clean_images = clean_images.to(self.device)
                 
                 reconstructed, _ = self.autoencoder(adv_images)
                 loss = self.reconstruction_criterion(reconstructed, clean_images)
                 
+                batch_size_actual = adv_images.size(0)
                 running_loss += loss.item() * batch_size_actual
                 total += batch_size_actual
                 
@@ -391,12 +405,20 @@ class autoencoder_manager:
                     image = Image.open(image_input_path).convert("RGB")
                     tensor = self.val_transform(image).unsqueeze(0).to(self.device)
                     
+                    denoised = None
+
                     # Denoise
                     with torch.no_grad():
                         denoised, _ = self.autoencoder(tensor)
                     
+                    # Denormalize from ImageNet stats back to [0, 1] for saving
+                    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).to(self.device)
+                    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1).to(self.device)
+                    denoised_img = denoised * std + mean
+                    denoised_img = torch.clamp(denoised_img, 0, 1)
+                    
                     # Save denoised image
-                    save_image(denoised[0], image_output_path)
+                    save_image(denoised_img[0], image_output_path)
                     total_processed += 1
                     
                 except Exception as e:

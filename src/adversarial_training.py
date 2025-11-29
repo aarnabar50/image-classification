@@ -7,7 +7,7 @@ from libs.config_manager_lib import config_manager
 
 from model_training import run_model_training, run_inference_mode
 from fgsm_attack import generate_adversarial_images, run_perturbed_evaluation
-from auto_encoder_training import run_auto_encoder_training
+from auto_encoder_training import denoise_with_autoencoder, run_auto_encoder_training
 
 def main():
     """Main function to provide user choices for model operations."""
@@ -27,7 +27,9 @@ def main():
         print("6. Run evaluation on PGD adversarial images")
         print("7. Train the model using YOPO adversarial training")
         print("8. Train the denoiser auto encoder model")
+        print("9. Denoise adversarial images using the auto encoder")
         print("0. Quit")
+        
         print("="*50)
         
         choice = input("\nEnter your choice: ").strip()
@@ -59,6 +61,9 @@ def main():
         elif choice == '8':
             print("Running denoiser auto encoder training...")
             run_auto_encoder_training("./src/configurations/config_training_auto_encoder.json")
+        elif choice == '9':
+            print("Denoising adversarial images using the auto encoder...")
+            denoise_with_autoencoder("./src/configurations/config_denoise_with_auto_encoder.json")
         else:
             print("Invalid choice. Please try again.")
 

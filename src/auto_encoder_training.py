@@ -62,12 +62,12 @@ def run_auto_encoder_training(config_path="./src/configurations/config_training_
 
     if(config.load_run_configuration())!=None:
         epoch = int(config.get_last_config_value("epoch", 1)) + 1
-        best_loss = config.get_last_config_value("best_val_acc", 0.0)
+        best_loss = config.get_last_config_value("best_val_acc", float('inf')) # For autoencoders, lower loss is better. The key name is kept same for consistency.
         checkpoint_path = config.get_last_config_value("checkpoint_path", "")
 
         autoencoder_model.init_autoencoder(latent_dim, checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
 
-        print(f"Resuming training from epoch {epoch} with best val_acc {best_loss:.4f} and weights from {checkpoint_path}")
+        print(f"Resuming training from epoch {epoch} with best val_loss {best_loss:.4f} and weights from {checkpoint_path}")
     else:
         autoencoder_model.init_autoencoder(latent_dim)    # Load resnet 18 model with random weights
         print("Starting fresh training with random initialized weights.")
@@ -150,10 +150,10 @@ def run_auto_encoder_training(config_path="./src/configurations/config_training_
 
 
 
-def denoise_with_autoencoder():
+def denoise_with_autoencoder(config_path="./src/configurations/config_denoise_with_auto_encoder.json"):
     """Function to run the auto encoder model in inference mode."""
 
-    config = config_manager("./src/configurations/config_denoise_with_auto_encoder.json")
+    config = config_manager(config_path)
     adversarial_data_dir = config.get_config_value("adversarial_data_dir")
     denoised_data_dir = config.get_config_value("denoised_data_dir")
     checkpoint_path = config.get_config_value("checkpoint_path")
@@ -172,9 +172,9 @@ def denoise_with_autoencoder():
     autoencoder_model = autoencoder_manager()
     autoencoder_model.init_autoencoder(latent_dim, checkpoint_path) 
 
-    autoencoder_model.denoise_adversarial_images(
-        adversarial_data_dir = adversarial_data_dir, 
-        denoised_data_dir = denoised_data_dir
+    autoencoder_model.denoise_with_autoencoder(
+        input_dir = adversarial_data_dir, 
+        output_dir = denoised_data_dir
     )
 
     print(f"\nDenoised images saved to {denoised_data_dir}")

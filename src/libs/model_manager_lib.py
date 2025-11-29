@@ -384,16 +384,34 @@ class model_manager:
                 perturbed = torch.clamp(perturbed, pixel_min, pixel_max)
                 perturbed.requires_grad = True
             
-            # Save perturbed images
-            for i, perturbed_img in enumerate(perturbed.detach()):
+            # Save perturbed images (denormalize first)
+            # Denormalize from ImageNet stats back to [0, 1]
+            mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).to(self.device)
+            std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1).to(self.device)
+            perturbed_denorm = perturbed.detach() * std + mean
+            perturbed_denorm = torch.clamp(perturbed_denorm, 0, 1)
+            
+            # Debug: print only for first batch
+            if batch_idx == 0 and total_images == 0:
+                print(f"\n{'='*60}")
+                print(f"DENORMALIZING ADVERSARIAL IMAGES BEFORE SAVING")
+                print(f"Before denorm range: [{perturbed.detach()[0].min():.3f}, {perturbed.detach()[0].max():.3f}]")
+                print(f"After denorm range: [{perturbed_denorm[0].min():.3f}, {perturbed_denorm[0].max():.3f}]")
+                print(f"{'='*60}\n")
+            
+            for i, perturbed_img in enumerate(perturbed_denorm):
                 label = labels[i].item()
                 class_name = self.class_names[label] if self.class_names else str(label)
                 
                 class_dir = f"{perturbed_data_directory}/{class_name}"
                 os.makedirs(class_dir, exist_ok=True)
                 
-                # Unique filename with timestamp to avoid collisions
-                img_path = f"{class_dir}/adv_{timestamp}_batch{batch_idx:04d}_img{i:03d}.png"
+                # Get original filename from dataset
+                original_idx = batch_idx * self.val_loader.batch_size + i
+                original_path = self.val_loader.dataset.samples[original_idx][0]
+                original_filename = os.path.basename(original_path)
+                img_path = f"{class_dir}/{original_filename}"
+                
                 save_image(perturbed_img, img_path)
                 total_images += 1
         
