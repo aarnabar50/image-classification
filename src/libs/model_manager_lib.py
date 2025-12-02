@@ -358,12 +358,18 @@ class model_manager:
         
         step_size = step_size or (epsilon if num_steps == 1 else epsilon / 4)
         total_images = 0
+        successful_attacks = 0
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         
         loop = tqdm(self.val_loader, desc="Generating adversarial images", leave=False)
         for batch_idx, (images, labels) in enumerate(loop):
             images = images.to(self.device)
             labels = labels.to(self.device)
+            
+            # Check original predictions
+            with torch.no_grad():
+                orig_outputs = self.model(images)
+                orig_preds = orig_outputs.argmax(dim=1)
             
             # PGD attack (FGSM if num_steps=1)
             perturbed = images.clone().detach()
@@ -383,6 +389,12 @@ class model_manager:
                 perturbed = torch.max(torch.min(perturbed, images + epsilon), images - epsilon)
                 perturbed = torch.clamp(perturbed, pixel_min, pixel_max)
                 perturbed.requires_grad = True
+            
+            # Check adversarial predictions
+            with torch.no_grad():
+                adv_outputs = self.model(perturbed)
+                adv_preds = adv_outputs.argmax(dim=1)
+                successful_attacks += (adv_preds != labels).sum().item()
             
             # Save perturbed images (denormalize first)
             # Denormalize from ImageNet stats back to [0, 1]
@@ -415,6 +427,10 @@ class model_manager:
                 save_image(perturbed_img, img_path)
                 total_images += 1
         
-        print(f"Saved {total_images} adversarial images to {perturbed_data_directory}")
+        attack_success_rate = (successful_attacks / total_images * 100) if total_images > 0 else 0
+        
+        print(f"\nSaved {total_images} adversarial images to {perturbed_data_directory}")
         print(f"Attack: {'FGSM' if num_steps == 1 else f'PGD-{num_steps}'}, epsilon={epsilon}")
+        print(f"Attack Success Rate: {attack_success_rate:.2f}% ({successful_attacks}/{total_images} misclassified)")
+        print(f"Note: Success rate measured on adversarial tensors before saving to disk")
 

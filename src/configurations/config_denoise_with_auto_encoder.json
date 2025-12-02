@@ -1,6 +1,6 @@
 {
     "adversarial_data_dir": "/Users/aarnabar/image-classification/data/perturbed_images_fgsm_01",
     "denoised_data_dir": "/Users/aarnabar/image-classification/data/perturbed_images_fgsm_01_denoised",
-    "checkpoint_path": "/Users/aarnabar/image-classification/runs/auto_encoding_001/state_20251129_1607.pth",
+    "checkpoint_path": "/Users/aarnabar/image-classification/runs/auto_encoding_001/state_20251130_0339.pth",
     "latent_dim": 128
 }
