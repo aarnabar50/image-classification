@@ -11,6 +11,7 @@ def generate_adversarial_images( config_path="./src/configurations/config_attack
     config = config_manager(config_path)
     val_dir   = config.get_config_value("validation_data_directory")
     perturbed_data_directory = config.get_config_value("perturbed_data_directory")
+    checkpoint_path = config.get_config_value("checkpoint_path")
     epsilon = config.get_config_value("epsilon", 0.03)
     num_steps = config.get_config_value("num_steps", 1)
     step_size = config.get_config_value("step_size", None)
@@ -23,6 +24,7 @@ def generate_adversarial_images( config_path="./src/configurations/config_attack
     print("-"*50)
     print(f"Validation Directory        : {val_dir}")
     print(f"Perturbed Data Directory    : {perturbed_data_directory}")
+    print(f"Checkpoint Path             : {checkpoint_path}")
     print(f"Epsilon                     : {epsilon}")
     print(f"Number of Steps             : {num_steps}")
     print(f"Step Size                   : {step_size}")
@@ -32,7 +34,10 @@ def generate_adversarial_images( config_path="./src/configurations/config_attack
     print("-"*50)
 
     attack_model.load_evaluation_dataset(val_dir, batch_size, num_workers)
-    attack_model.init_model()
+    if checkpoint_path != "":
+        attack_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
+    else:
+        attack_model.init_model()    # Load resnet 18 model with random weights
 
     attack_model.generate_adversarial_images(perturbed_data_directory, epsilon, num_steps, step_size, normalized)
 
@@ -147,5 +152,5 @@ def run_perturbed_evaluation(config_path="./src/configurations/config_perturbed_
         epoch += 1
 
 
-    print("\Evaluation finished.")
+    print("Evaluation finished.")
     print("Best validation accuracy:", best_val_acc)
