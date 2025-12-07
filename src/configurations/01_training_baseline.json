@@ -1,11 +1,11 @@
 {
     "training_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/train_1",
     "validation_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/val_1",
-    "run_name": "basic_training_006",
+    "run_name": "train_baseline_01",
     "training_percentage": 100,
     "eval_percentage": 100,
     "print_every_epoch": 1,
-    "epochs": 5,
+    "epochs": 15,
     "batch_size": 32,
     "num_workers": 4,    
     "run_directory": "/Users/aarnabar/image-classification/runs"

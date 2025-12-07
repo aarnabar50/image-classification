@@ -213,7 +213,13 @@ class model_manager:
                 # PGD step
                 images_adv = images_adv.detach() + step_size * grad.sign()
                 images_adv = torch.max(torch.min(images_adv, images + epsilon), images - epsilon)
-                images_adv = torch.clamp(images_adv, 0, 1)
+                # Clamp to valid normalized image range (not [0,1]!)
+                # For ImageNet normalization: roughly [-2.5, 2.5]
+                mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(self.device)
+                std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(self.device)
+                pixel_min = (0 - mean) / std
+                pixel_max = (1 - mean) / std
+                images_adv = torch.clamp(images_adv, pixel_min, pixel_max)
                 images_adv.requires_grad = True
             
             # Step 4: Update model parameters using the already computed gradients from clean loss
@@ -361,7 +367,10 @@ class model_manager:
         successful_attacks = 0
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        loop = tqdm(self.val_loader, desc="Generating adversarial images", leave=False)
+        print(f"\nStarting adversarial attack generation...")
+        print(f"Epsilon: {epsilon}, Normalized: {normalized}, Num steps: {num_steps}")
+        
+        loop = tqdm(self.val_loader, desc="Generating adversarial images", leave=True)
         for batch_idx, (images, labels) in enumerate(loop):
             images = images.to(self.device)
             labels = labels.to(self.device)
@@ -370,6 +379,7 @@ class model_manager:
             with torch.no_grad():
                 orig_outputs = self.model(images)
                 orig_preds = orig_outputs.argmax(dim=1)
+                orig_correct = (orig_preds == labels)
             
             # PGD attack (FGSM if num_steps=1)
             perturbed = images.clone().detach()
@@ -387,14 +397,31 @@ class model_manager:
                 
                 # Project back to epsilon ball around original image
                 perturbed = torch.max(torch.min(perturbed, images + epsilon), images - epsilon)
-                perturbed = torch.clamp(perturbed, pixel_min, pixel_max)
+                # Don't clamp to pixel bounds - the epsilon ball constraint is sufficient
+                # and pixel bounds would clip away the perturbations
                 perturbed.requires_grad = True
             
             # Check adversarial predictions
             with torch.no_grad():
                 adv_outputs = self.model(perturbed)
                 adv_preds = adv_outputs.argmax(dim=1)
-                successful_attacks += (adv_preds != labels).sum().item()
+                # Count successful attacks: originally correct → adversarially wrong
+                successful_attacks += ((orig_preds == labels) & (adv_preds != labels)).sum().item()
+            
+            # Debug first batch
+            if batch_idx == 0:
+                perturbation = (perturbed - images).abs()
+                print(f"\n{'='*60}", flush=True)
+                print(f"ATTACK GENERATION DEBUG (First Batch)", flush=True)
+                print(f"Epsilon: {epsilon}", flush=True)
+                print(f"Images range: [{images[0].min():.3f}, {images[0].max():.3f}]", flush=True)
+                print(f"Perturbed range: [{perturbed[0].min():.3f}, {perturbed[0].max():.3f}]", flush=True)
+                print(f"Perturbation L-inf: {perturbation.max():.6f}", flush=True)
+                print(f"Pixel bounds: [{pixel_min[0].min():.3f}, {pixel_max[0].max():.3f}]", flush=True)
+                print(f"Original correct: {orig_correct.sum()}/{len(orig_correct)}", flush=True)
+                print(f"Adversarial wrong: {(adv_preds != labels).sum()}/{len(labels)}", flush=True)
+                print(f"Attack success (correct→wrong): {((orig_preds == labels) & (adv_preds != labels)).sum()}/{orig_correct.sum()}", flush=True)
+                print(f"{'='*60}\n", flush=True)
             
             # Save perturbed images (denormalize first)
             # Denormalize from ImageNet stats back to [0, 1]
@@ -404,12 +431,12 @@ class model_manager:
             perturbed_denorm = torch.clamp(perturbed_denorm, 0, 1)
             
             # Debug: print only for first batch
-            if batch_idx == 0 and total_images == 0:
-                print(f"\n{'='*60}")
-                print(f"DENORMALIZING ADVERSARIAL IMAGES BEFORE SAVING")
-                print(f"Before denorm range: [{perturbed.detach()[0].min():.3f}, {perturbed.detach()[0].max():.3f}]")
-                print(f"After denorm range: [{perturbed_denorm[0].min():.3f}, {perturbed_denorm[0].max():.3f}]")
-                print(f"{'='*60}\n")
+            if batch_idx == 0:
+                print(f"\n{'='*60}", flush=True)
+                print(f"DENORMALIZING ADVERSARIAL IMAGES BEFORE SAVING", flush=True)
+                print(f"Before denorm range: [{perturbed.detach()[0].min():.3f}, {perturbed.detach()[0].max():.3f}]", flush=True)
+                print(f"After denorm range: [{perturbed_denorm[0].min():.3f}, {perturbed_denorm[0].max():.3f}]", flush=True)
+                print(f"{'='*60}\n", flush=True)
             
             for i, perturbed_img in enumerate(perturbed_denorm):
                 label = labels[i].item()
@@ -429,8 +456,14 @@ class model_manager:
         
         attack_success_rate = (successful_attacks / total_images * 100) if total_images > 0 else 0
         
-        print(f"\nSaved {total_images} adversarial images to {perturbed_data_directory}")
+        print(f"\n{'='*60}")
+        print(f"ADVERSARIAL ATTACK COMPLETE")
+        print(f"{'='*60}")
+        print(f"Saved {total_images} adversarial images to {perturbed_data_directory}")
         print(f"Attack: {'FGSM' if num_steps == 1 else f'PGD-{num_steps}'}, epsilon={epsilon}")
-        print(f"Attack Success Rate: {attack_success_rate:.2f}% ({successful_attacks}/{total_images} misclassified)")
+        print(f"Attack Success Rate: {attack_success_rate:.2f}%")
+        print(f"  - Successfully attacked: {successful_attacks} images")
+        print(f"  - (originally correct → adversarially wrong)")
         print(f"Note: Success rate measured on adversarial tensors before saving to disk")
+        print(f"{'='*60}\n")
 

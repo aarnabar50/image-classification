@@ -5,7 +5,7 @@ from libs.auto_encoder_lib import autoencoder_manager
 from libs.config_manager_lib import config_manager
 
 
-def run_auto_encoder_training(config_path="./src/configurations/config_training_auto_encoder.json"):
+def run_auto_encoder_training(config_path=None):
     """Function to run training epochs for denoiser auto encoder training."""
 
     print("\n" + "="*50)
@@ -150,7 +150,7 @@ def run_auto_encoder_training(config_path="./src/configurations/config_training_
 
 
 
-def denoise_with_autoencoder(config_path="./src/configurations/config_denoise_with_auto_encoder.json"):
+def denoise_with_autoencoder(config_path=None):
     """Function to run the auto encoder model in inference mode."""
 
     config = config_manager(config_path)

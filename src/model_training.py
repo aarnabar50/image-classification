@@ -5,7 +5,7 @@ from libs.model_manager_lib import model_manager
 from libs.config_manager_lib import config_manager
 
 
-def run_model_training(config_path="./src/configurations/config_training_baseline.json", Training_Type="Baseline"):
+def run_model_training(config_path=None, Training_Type="Baseline"):
     """Function to run training epochs for adversarial training."""
 
     print("\n" + "="*50)
@@ -159,10 +159,10 @@ def run_model_training(config_path="./src/configurations/config_training_baselin
     print("\nTraining finished.")
     print("Best validation accuracy:", best_val_acc)
 
-def run_inference_mode():
+def run_inference_mode(config_path=None):
     """Function to run the model in inference mode."""
 
-    config = config_manager("./src/configurations/config_inference.json")
+    config = config_manager(config_path)
     checkpoint_path = config.get_config_value("checkpoint_path")
 
     print("\n" + "-"*50)

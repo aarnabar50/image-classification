@@ -4,7 +4,7 @@ import os
 from libs.model_manager_lib import model_manager
 from libs.config_manager_lib import config_manager
 
-def generate_adversarial_images( config_path="./src/configurations/config_attack_fgsm.json"):
+def generate_adversarial_images( config_path=None):
     """Function to run the model to generate images with FGSM attack."""
 
     attack_model = model_manager()
@@ -43,9 +43,10 @@ def generate_adversarial_images( config_path="./src/configurations/config_attack
 
     print(f"\nAdversarial images generated and saved to {perturbed_data_directory}")
 
+    config.save_configuration(perturbed_data_directory)
 
 
-def run_perturbed_evaluation(config_path="./src/configurations/config_perturbed_evaluation.json"):
+def run_perturbed_evaluation(config_path=None):
     """Function to run evaluation on perturbed data."""
 
     print("\n" + "="*50)

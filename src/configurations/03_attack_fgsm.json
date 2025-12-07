@@ -1,0 +1,12 @@
+{
+    "validation_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/train_1_subset_10pct",
+    "perturbed_data_directory": "/Users/aarnabar/image-classification/data/fgsm_with_lisa_train_10pct",
+    "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_baseline_04/state_20251126_1020.pth",
+    "epsilon": 0.3,
+    "num_steps": 1,
+    "step_size": null,
+    "normalized": true,
+    "batch_size": 32,
+    "num_workers": 4
+
+}

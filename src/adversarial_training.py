@@ -39,31 +39,31 @@ def main():
             break
         elif choice == '1':
             print("Running baseline training...")            
-            run_model_training("./src/configurations/config_training_baseline.json", "Baseline")
+            run_model_training("./src/configurations/01_training_baseline.json", "Baseline")
         elif choice == '2':
             print("Running model in inference mode...")
-            run_inference_mode()
+            run_inference_mode("./src/configurations/02_inference.json")
         elif choice == '3':
             print("Running FGSM adversarial attack...")
-            generate_adversarial_images("./src/configurations/config_attack_fgsm.json")
+            generate_adversarial_images("./src/configurations/03_attack_fgsm.json")
         elif choice == '4':
             print("Running PGD adversarial attack...")
-            generate_adversarial_images("./src/configurations/config_attack_pgd.json")
+            generate_adversarial_images("./src/configurations/04_attack_pgd.json")
         elif choice == '5':
             print("Running evaluation on FGSM adversarial images...")
-            run_perturbed_evaluation("./src/configurations/config_perturbed_evaluation_fgsm.json")
+            run_perturbed_evaluation("./src/configurations/05_evaluation_fgsm.json")
         elif choice == '6':
             print("Running evaluation on PGD adversarial images...")
-            run_perturbed_evaluation("./src/configurations/config_perturbed_evaluation_pgd.json")
+            run_perturbed_evaluation("./src/configurations/06_evaluation_pgd.json")
         elif choice == '7':
             print("Running YOPO YOPO training...")
-            run_model_training("./src/configurations/config_training_yopo.json", "YOPO")
+            run_model_training("./src/configurations/07_training_yopo.json", "YOPO")
         elif choice == '8':
             print("Running denoiser auto encoder training...")
-            run_auto_encoder_training("./src/configurations/config_training_auto_encoder.json")
+            run_auto_encoder_training("./src/configurations/08_training_auto_encoder.json")
         elif choice == '9':
             print("Denoising adversarial images using the auto encoder...")
-            denoise_with_autoencoder("./src/configurations/config_denoise_with_auto_encoder.json")
+            denoise_with_autoencoder("./src/configurations/09_denoise_with_auto_encoder.json")
         else:
             print("Invalid choice. Please try again.")
 

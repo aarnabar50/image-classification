@@ -93,4 +93,13 @@ class config_manager:
             json.dump(self.config, f, indent=4)
         print(f"Run configuration saved to {run_config}")
 
-        
+
+
+    def save_configuration(self, save_path):
+
+        os.makedirs(save_path, exist_ok=True) 
+
+        run_config = f"{save_path}/run_configuration.json"
+        with open(run_config, 'w') as f:
+            json.dump(self.config, f, indent=4)
+        print(f"Run configuration saved to {run_config}")
