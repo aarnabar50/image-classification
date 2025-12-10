@@ -55,7 +55,7 @@ class model_manager:
         self.class_names = train_dataset.classes
         self.num_classes = len(self.class_names)
 
-    def load_evaluation_dataset(self, val_dir, in_batch_size, in_num_workers):
+    def load_evaluation_dataset(self, val_dir, in_batch_size, in_num_workers, in_shuffle=False):
         """Initialize the data sets for training and validation datasets."""
 
         val_dataset   = datasets.ImageFolder(root=str(val_dir), transform=self.val_transform)
@@ -67,7 +67,7 @@ class model_manager:
         self.val_loader = DataLoader(
             val_dataset,
             batch_size=batch_size,
-            shuffle=False,   # changed to False for validation
+            shuffle=in_shuffle,   # changed to False for validation
             num_workers=num_workers,
             pin_memory=False,
             persistent_workers=True
@@ -81,7 +81,7 @@ class model_manager:
     def load_datasets(self, train_dir, val_dir, in_batch_size, in_num_workers):
         """Initialize the data sets for training and validation datasets."""
         self.load_training_dataset(train_dir, in_batch_size, in_num_workers)
-        self.load_evaluation_dataset(val_dir, in_batch_size, in_num_workers)
+        self.load_evaluation_dataset(val_dir, in_batch_size, in_num_workers, False)
 
     def init_model(self, state_dict_path=None):
         """Initialize the model, loss function, and optimizer."""

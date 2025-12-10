@@ -33,7 +33,7 @@ def generate_adversarial_images( config_path=None):
     print(f"Number of Workers           : {num_workers}")
     print("-"*50)
 
-    attack_model.load_evaluation_dataset(val_dir, batch_size, num_workers)
+    attack_model.load_evaluation_dataset(val_dir, batch_size, num_workers, False)
     if checkpoint_path != "":
         attack_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
     else:
@@ -56,6 +56,7 @@ def run_perturbed_evaluation(config_path=None):
     val_dir   = config.get_config_value("validation_data_directory")
     number_of_epochs = config.get_config_value("epochs", 10)
     eval_percentage = config.get_config_value("eval_percentage", 10)
+    shuffle = config.get_config_value("shuffle", False)
     batch_size = config.get_config_value("batch_size", 32)
     num_workers = config.get_config_value("num_workers", 4)
     print_every_epoch = config.get_config_value("print_every_epoch", 1)
@@ -68,6 +69,7 @@ def run_perturbed_evaluation(config_path=None):
     print(f"Validation Directory    : {val_dir}")
     print(f"Number of Epochs        : {number_of_epochs}")
     print(f"Evaluation Percentage   : {eval_percentage}%")
+    print(f"Shuffle                 : {shuffle}")
     print(f"Batch Size              : {batch_size}")
     print(f"Number of Workers       : {num_workers}")
     print(f"Print Every Epoch       : {print_every_epoch}")
@@ -92,7 +94,7 @@ def run_perturbed_evaluation(config_path=None):
     val_cpu_time = 0
 
     base_model = model_manager()
-    base_model.load_evaluation_dataset(val_dir, batch_size, num_workers)
+    base_model.load_evaluation_dataset(val_dir, batch_size, num_workers, shuffle)
     base_model.init_model(checkpoint_path)    # Load resnet 18 model along with weights from checkpoint
     
 

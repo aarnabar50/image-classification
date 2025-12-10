@@ -1,9 +1,10 @@
 {
-    "validation_data_directory": "/Users/aarnabar/image-classification/data/fgsm_with_lisa_01",
-    "run_name": "eval_fgsm_lisa_01",
-    "checkpoint_path": "/Users/aarnabar/image-classification/runs/basic_training_004/state_20251126_1020.pth",
+    "validation_data_directory": "/Users/aarnabar/image-classification/data/denoised_fgsm_01",
+    "run_name": "eval_denoised_fgsm_5e",
+    "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_baseline_01/state_20251208_0448.pth",
     "eval_percentage": 100,
+    "shuffle": true,
     "print_every_epoch": 1,
-    "epochs": 2,
+    "epochs": 5,
     "run_directory": "/Users/aarnabar/image-classification/runs"
 }

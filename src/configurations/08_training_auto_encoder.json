@@ -1,11 +1,11 @@
 {
     "clean_data_dir": "/Users/aarnabar/image-classification/data/cropped_lisa_1/val_1",
     "adversarial_data_dir": "/Users/aarnabar/image-classification/data/perturbed_images_fgsm_01",
-    "run_name": "auto_encoding_001",
+    "run_name": "auto_encoding_02",
     "training_percentage": 100,
     "eval_percentage": 100,
     "print_every_epoch": 5,
-    "epochs": 50,
+    "epochs": 2,
     "batch_size": 32,
     "num_workers": 4,    
     "latent_dim": 128,

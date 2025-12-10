@@ -1,7 +1,7 @@
 {
     "validation_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/val_1",
-    "perturbed_data_directory": "/Users/aarnabar/image-classification/data/perturbed_images_pgd_01",
-    "checkpoint_path": "/Users/aarnabar/image-classification/runs/basic_training_004/state_20251126_1020.pth",
+    "perturbed_data_directory": "/Users/aarnabar/image-classification/data/pgd_with_lisa_15e",
+    "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_baseline_01/state_20251208_0448.pth",
     "epsilon": 0.05,
     "num_steps": 5,
     "step_size": null,
