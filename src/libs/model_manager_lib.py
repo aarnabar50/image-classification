@@ -164,7 +164,7 @@ class model_manager:
 
         return epoch_loss, epoch_acc, epoch_total_images, epoch_time, epoch_latency, epoch_cpu_time
 
-    def train_yopo(self, training_percentage=100, epsilon=0.031, num_steps=5, step_size=0.007):
+    def train_yopo(self, training_percentage=100, epsilon=0.031, num_steps=3, step_size=0.01):
         """
         Train the model using YOPO (You Only Propagate Once) adversarial training.
         
@@ -174,8 +174,8 @@ class model_manager:
         Args:
             training_percentage: Percentage of training data to use (1-100)
             epsilon: Maximum perturbation magnitude (L-infinity norm)
-            num_steps: Number of PGD steps for attack generation
-            step_size: Step size for each PGD iteration
+            num_steps: Number of PGD steps for attack generation (default 3 for speed)
+            step_size: Step size for each PGD iteration (default epsilon/3)
         """
         self.model.train()
         running_loss = 0.0
@@ -213,13 +213,7 @@ class model_manager:
                 # PGD step
                 images_adv = images_adv.detach() + step_size * grad.sign()
                 images_adv = torch.max(torch.min(images_adv, images + epsilon), images - epsilon)
-                # Clamp to valid normalized image range (not [0,1]!)
-                # For ImageNet normalization: roughly [-2.5, 2.5]
-                mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(self.device)
-                std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(self.device)
-                pixel_min = (0 - mean) / std
-                pixel_max = (1 - mean) / std
-                images_adv = torch.clamp(images_adv, pixel_min, pixel_max)
+                # Don't clamp to pixel bounds - epsilon ball constraint is sufficient
                 images_adv.requires_grad = True
             
             # Step 4: Update model parameters using the already computed gradients from clean loss

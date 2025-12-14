@@ -1,10 +1,10 @@
 {
     "validation_data_directory": "/Users/aarnabar/image-classification/data/denoised_pgd_01",
-    "run_name": "eval_denoised_pgd_5e",
-    "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_baseline_01/state_20251208_0448.pth",
+    "run_name": "eval_hybrid_pgd_01",
+    "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_yopo_03/state_20251214_0703.pth",
     "eval_percentage": 100,
     "shuffle": true,
     "print_every_epoch": 1,
-    "epochs": 5,
+    "epochs": 15,
     "run_directory": "/Users/aarnabar/image-classification/runs"
 }
