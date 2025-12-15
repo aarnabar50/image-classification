@@ -5,6 +5,6 @@
     "eval_percentage": 100,
     "shuffle": true,
     "print_every_epoch": 1,
-    "epochs": 15,
+    "epochs": 2,
     "run_directory": "/Users/aarnabar/image-classification/runs"
 }
