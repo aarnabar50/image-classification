@@ -1,6 +1,6 @@
 {
-    "validation_data_directory": "/Users/aarnabar/image-classification/data/denoised_fgsm_01",
-    "run_name": "eval_denoised_fgsm_demo01",
+    "validation_data_directory": "/Users/aarnabar/image-classification/data/denoised_fgsm_02",
+    "run_name": "eval_denoised_fgsm_baseline_01",
     "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_baseline_01/state_20251208_0448.pth",
     "eval_percentage": 100,
     "shuffle": true,

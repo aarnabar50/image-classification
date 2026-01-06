@@ -35,6 +35,7 @@ def run_model_training(config_path=None, Training_Type="Baseline"):
     train_dir = config.get_config_value("training_data_directory")
     val_dir   = config.get_config_value("validation_data_directory")
     number_of_epochs = config.get_config_value("epochs", 10)
+    adversarial_ratio = config.get_config_value("adversarial_ratio", 1.0)
     training_percentage = config.get_config_value("training_percentage", 10)
     eval_percentage = config.get_config_value("eval_percentage", 10)
     batch_size = config.get_config_value("batch_size", 32)
@@ -55,6 +56,7 @@ def run_model_training(config_path=None, Training_Type="Baseline"):
     print(f"Training Directory      : {train_dir}")
     print(f"Validation Directory    : {val_dir}")
     print(f"Number of Epochs        : {number_of_epochs}")
+    print(f"Adversarial Ratio       : {adversarial_ratio}")
     print(f"Training Percentage     : {training_percentage}%")
     print(f"Evaluation Percentage   : {eval_percentage}%")
     print(f"Batch Size              : {batch_size}")
@@ -94,7 +96,7 @@ def run_model_training(config_path=None, Training_Type="Baseline"):
         print(f"\nEpoch {epoch}/{number_of_epochs}")
 
         if Training_Type=="YOPO":
-            train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train_yopo(training_percentage, epsilon, num_steps, step_size)
+            train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train_yopo(training_percentage, epsilon, num_steps, step_size, adversarial_ratio)
         else:
             train_loss, train_acc, train_total_images, train_time, train_latency, train_cpu_time = base_model.train(training_percentage)
 

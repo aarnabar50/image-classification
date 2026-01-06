@@ -1,11 +1,12 @@
 {
     "training_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/train_1",
     "validation_data_directory": "/Users/aarnabar/image-classification/data/cropped_lisa_1/val_1",
-    "run_name": "yopo_training_003",
+    "run_name": "train_yopo_04",
     "training_percentage": 100,
     "eval_percentage": 100,
     "print_every_epoch": 1,
     "epochs": 15,
+    "adversarial_ratio": 0.7,
     "batch_size": 32,
     "num_workers": 4,
     "checkpoint_path": "/Users/aarnabar/image-classification/runs/train_baseline_01/state_20251208_0448.pth",

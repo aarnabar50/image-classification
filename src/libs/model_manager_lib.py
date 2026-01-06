@@ -164,18 +164,21 @@ class model_manager:
 
         return epoch_loss, epoch_acc, epoch_total_images, epoch_time, epoch_latency, epoch_cpu_time
 
-    def train_yopo(self, training_percentage=100, epsilon=0.031, num_steps=3, step_size=0.01):
+    def train_yopo(self, training_percentage=100, epsilon=0.031, num_steps=3, step_size=0.01, adversarial_ratio=1.0):
         """
         Train the model using YOPO (You Only Propagate Once) adversarial training.
         
-        YOPO is an efficient adversarial training method that reduces computational cost
-        by propagating gradients only once and reusing cached gradients for attack generation.
+        YOPO generates adversarial examples efficiently and trains on a mix of adversarial and clean images.
+        Fresh adversarial examples are generated each batch against the current model weights.
         
         Args:
             training_percentage: Percentage of training data to use (1-100)
             epsilon: Maximum perturbation magnitude (L-infinity norm)
             num_steps: Number of PGD steps for attack generation (default 3 for speed)
             step_size: Step size for each PGD iteration (default epsilon/3)
+            adversarial_ratio: Ratio of adversarial images in each batch (0.0-1.0)
+                             0.7 = 70% adversarial, 30% clean (recommended)
+                             1.0 = 100% adversarial (pure adversarial training)
         """
         self.model.train()
         running_loss = 0.0
@@ -187,54 +190,61 @@ class model_manager:
             images = images.to(self.device, non_blocking=True)
             labels = labels.to(self.device, non_blocking=True)
             
-            # Step 1: Forward pass on clean images
-            self.optimizer.zero_grad()
-            outputs_clean = self.model(images)
-            loss_clean = self.criterion(outputs_clean, labels)
+            batch_size = images.size(0)
+            num_adversarial = int(batch_size * adversarial_ratio)
             
-            # Step 2: Backward pass to compute gradients (YOPO: propagate once)
-            loss_clean.backward()
-            
-            # Step 3: Cache the gradient of the first layer (input-level gradients)
-            # For YOPO, we need to register hooks to capture intermediate gradients
-            # Simplified version: use input gradients directly
-            images_adv = images.detach().clone()
-            images_adv.requires_grad = True
-            
-            # Generate adversarial examples using PGD with cached information
-            for _ in range(num_steps):
-                # Forward pass for adversarial generation
-                outputs_adv = self.model(images_adv)
-                loss_adv = self.criterion(outputs_adv, labels)
+            if num_adversarial > 0:
+                # Split batch: first part adversarial, rest clean
+                images_to_attack = images[:num_adversarial]
+                labels_adv = labels[:num_adversarial]
                 
-                # Compute gradients w.r.t. adversarial images
-                grad = torch.autograd.grad(loss_adv, images_adv, create_graph=False)[0]
-                
-                # PGD step
-                images_adv = images_adv.detach() + step_size * grad.sign()
-                images_adv = torch.max(torch.min(images_adv, images + epsilon), images - epsilon)
-                # Don't clamp to pixel bounds - epsilon ball constraint is sufficient
+                # Generate adversarial examples using PGD
+                images_adv = images_to_attack.detach().clone()
                 images_adv.requires_grad = True
+                
+                for _ in range(num_steps):
+                    # Forward pass for adversarial generation
+                    outputs_adv = self.model(images_adv)
+                    loss_adv = self.criterion(outputs_adv, labels_adv)
+                    
+                    # Compute gradients w.r.t. adversarial images
+                    self.model.zero_grad()
+                    loss_adv.backward()
+                    grad = images_adv.grad.data
+                    
+                    # PGD step
+                    images_adv = images_adv.detach() + step_size * grad.sign()
+                    images_adv = torch.max(torch.min(images_adv, images_to_attack + epsilon), images_to_attack - epsilon)
+                    images_adv.requires_grad = True
+                
+                # Combine adversarial and clean images
+                if num_adversarial < batch_size:
+                    # Mix: adversarial + clean
+                    mixed_images = torch.cat([images_adv.detach(), images[num_adversarial:]], dim=0)
+                    mixed_labels = labels  # Labels stay the same
+                else:
+                    # Pure adversarial
+                    mixed_images = images_adv.detach()
+                    mixed_labels = labels
+            else:
+                # Pure clean training (adversarial_ratio = 0)
+                mixed_images = images
+                mixed_labels = labels
             
-            # Step 4: Update model parameters using the already computed gradients from clean loss
-            # YOPO uses the gradients from Step 2 (clean images) to update parameters
-            self.optimizer.step()
-            
-            # Step 5: Optional - Train on adversarial examples with a separate forward/backward
-            # This is a hybrid approach for better robustness
+            # Train on mixed batch
             self.optimizer.zero_grad()
-            outputs_adv_final = self.model(images_adv.detach())
-            loss_adv_final = self.criterion(outputs_adv_final, labels)
-            loss_adv_final.backward()
+            outputs = self.model(mixed_images)
+            loss = self.criterion(outputs, mixed_labels)
+            loss.backward()
             self.optimizer.step()
             
-            # Track metrics (use adversarial predictions)
-            running_loss += loss_adv_final.item() * images.size(0)
-            _, preds = outputs_adv_final.max(1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
+            # Track metrics
+            running_loss += loss.item() * batch_size
+            _, preds = outputs.max(1)
+            correct += (preds == mixed_labels).sum().item()
+            total += batch_size
             
-            loop.set_postfix(loss=loss_adv_final.item())
+            loop.set_postfix(loss=loss.item())
             
             # Check if we've reached the desired training percentage
             progress_percentage = (loop.n / loop.total) * 100
